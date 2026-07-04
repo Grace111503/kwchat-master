@@ -1,0 +1,171 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+spring:
+  application:
+    name: kwchat
+  profiles:
+    active: dev
+
+  # 数据源配置
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/kuaitong?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: root
+    password: root123456
+    type: com.alibaba.druid.pool.DruidDataSource
+    druid:
+      initial-size: 5
+      min-idle: 5
+      max-active: 20
+      max-wait: 60000
+      time-between-eviction-runs-millis: 60000
+      min-evictable-idle-time-millis: 300000
+      validation-query: SELECT 1 FROM DUAL
+      test-while-idle: true
+      test-on-borrow: false
+      test-on-return: false
+      pool-prepared-statements: true
+      max-pool-prepared-statement-per-connection-size: 20
+      stat-view-servlet:
+        enabled: true
+        url-pattern: /druid/*
+        login-username: admin
+        login-password: admin123
+      filter:
+        stat:
+          enabled: true
+          log-slow-sql: true
+          slow-sql-millis: 1000
+          merge-sql: true
+        wall:
+          config:
+            multi-statement-allow: true
+
+  # Redis配置
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: redis123
+      database: 0
+      timeout: 10000
+      lettuce:
+        pool:
+          max-active: 8
+          max-wait: -1
+          max-idle: 8
+          min-idle: 0
+
+  # RabbitMQ配置
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: tyy
+    password: tyy123456
+    virtual-host: kwchat
+    listener:
+      simple:
+        acknowledge-mode: manual
+        concurrency: 1
+        max-concurrency: 10
+        prefetch: 1
+      direct:
+        acknowledge-mode: manual
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    template:
+      mandatory: true
+
+  # 文件上传配置
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 100MB
+      max-request-size: 100MB
+
+  # Jackson配置
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+
+# MyBatis-Plus配置
+mybatis-plus:
+  mapper-locations: classpath*:mapper/**/*.xml
+  type-aliases-package: com.kwp.chat.model
+  global-config:
+    db-config:
+      id-type: assign_id
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+      table-underline: true
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    cache-enabled: false
+
+# MinIO配置
+minio:
+  endpoint: http://localhost:9000
+  access-key: minioadmin
+  secret-key: minioadmin123
+  bucket-name: kuaitong
+  url: http://localhost:9000
+
+# JWT配置
+jwt:
+  secret: defaultSecretKeyForJwtTokenGeneration2024
+  expiration: 86400000
+  refresh-expiration: 604800000
+
+# Knife4j配置
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
+
+# 日志配置
+logging:
+  level:
+    root: INFO
+    com.kwp.chat: DEBUG
+    org.springframework.web: DEBUG
+    org.springframework.security: DEBUG
+  pattern:
+    dateformat: yyyy-MM-dd HH:mm:ss.SSS
+  file:
+    name: logs/kwchat.log
+    max-size: 100MB
+    max-history: 30
+
+# Netty WebSocket配置
+netty:
+  websocket:
+    port: 9092
+    boss-threads: 1
+    worker-threads: 4
+    heartbeat-timeout: 60
+
+# AI配置
+ai:
+  enabled: false
+  api-key: ${AI_API_KEY:}
+  model: gpt-3.5-turbo
+  max-tokens: 2000
+  temperature: 0.7
+
+# Actuator配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always

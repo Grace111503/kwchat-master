@@ -1,0 +1,156 @@
+version: '3.8'
+
+services:
+  # MySQL
+  mysql:
+    image: mysql:8.0
+    container_name: kwchat-mysql
+    restart: always
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root123456
+      MYSQL_DATABASE: kuaitong
+      MYSQL_USER: kwchat
+      MYSQL_PASSWORD: kwchat123456
+      TZ: Asia/Shanghai
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ../sql:/docker-entrypoint-initdb.d
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --default-authentication-plugin=mysql_native_password
+      --character-set-client-handshake=FALSE
+      --init-connect='SET NAMES utf8mb4'
+    networks:
+      - kwchat-network
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: kwchat-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    environment:
+      TZ: Asia/Shanghai
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --requirepass "redis123"
+    networks:
+      - kwchat-network
+
+  # MinIO
+  minio:
+    image: minio/minio:latest
+    container_name: kwchat-minio
+    restart: always
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+      TZ: Asia/Shanghai
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    networks:
+      - kwchat-network
+
+  # RabbitMQ
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: kwchat-rabbitmq
+    restart: always
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: tyy
+      RABBITMQ_DEFAULT_PASS: tyy123456
+      RABBITMQ_DEFAULT_VHOST: kwchat
+      TZ: Asia/Shanghai
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - kwchat-network
+
+  # Elasticsearch
+  elasticsearch:
+    image: elasticsearch:8.12.0
+    container_name: kwchat-elasticsearch
+    restart: always
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - TZ=Asia/Shanghai
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - kwchat-network
+
+  # Kibana
+  kibana:
+    image: kibana:8.12.0
+    container_name: kwchat-kibana
+    restart: always
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - TZ=Asia/Shanghai
+    depends_on:
+      - elasticsearch
+    networks:
+      - kwchat-network
+
+  # Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: kwchat-prometheus
+    restart: always
+    ports:
+      - "9090:9090"
+    environment:
+      TZ: Asia/Shanghai
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    networks:
+      - kwchat-network
+
+  # Grafana
+  grafana:
+    image: grafana/grafana:latest
+    container_name: kwchat-grafana
+    restart: always
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin123456
+      - TZ=Asia/Shanghai
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - kwchat-network
+
+networks:
+  kwchat-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+  redis_data:
+  minio_data:
+  rabbitmq_data:
+  elasticsearch_data:
+  prometheus_data:
+  grafana_data:

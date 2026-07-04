@@ -1,0 +1,52 @@
+package com.kwp.chat.service;
+
+import com.kwp.chat.model.dto.UserInfoResponse;
+import com.kwp.chat.model.friend.FriendRequest;
+
+import java.util.List;
+
+/**
+ * 好友服务接口
+ */
+public interface FriendService {
+
+    /**
+     * 发送好友申请
+     */
+    void sendFriendRequest(Long senderId, Long receiverId, String message);
+
+    /**
+     * 处理好友申请
+     */
+    void handleFriendRequest(Long requestId, Long userId, Integer status);
+
+    /**
+     * 获取好友列表
+     */
+    List<UserInfoResponse> getFriendList(Long userId);
+
+    /**
+     * 获取收到的好友申请列表
+     */
+    List<FriendRequest> getReceivedFriendRequests(Long userId);
+
+    /**
+     * 获取发出的好友申请列表
+     */
+    List<FriendRequest> getSentFriendRequests(Long userId);
+
+    /**
+     * 删除好友
+     */
+    void deleteFriend(Long userId, Long friendId);
+
+    /**
+     * 更新好友备注
+     */
+    void updateFriendRemark(Long userId, Long friendId, String remark);
+
+    /**
+     * 检查是否是好友
+     */
+    boolean isFriend(Long userId, Long friendId);
+}
