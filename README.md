@@ -2,6 +2,15 @@
 
 快伟通是快伟派科技有限公司推出的企业级即时通讯平台，支持多端部署，提供安全可靠的沟通协作体验。
 
+## 🆕 最新更新
+
+### 2024年更新
+- **头像功能**：支持自定义头像上传，未设置头像时显示用户名最后两个字
+- **注册优化**：注册时只需填写用户名、部门、手机号、密码
+- **联系人详情**：点击好友可查看完整信息（用户名、部门、手机号、邮箱、性别、个性签名）
+- **性别选项**：简化为男/女两个选项
+- **本地存储**：头像支持本地文件存储，不再强制依赖 MinIO
+
 ## ✨ 功能特性
 
 ### 💬 即时通讯
@@ -17,6 +26,13 @@
 - 好友分组管理
 - 好友备注
 - 黑名单功能
+- 好友详情查看（用户名、部门、手机号、邮箱、性别、个性签名）
+
+### 👤 用户中心
+- 自定义头像上传（支持 JPG/PNG/GIF/WebP，最大 2MB）
+- 默认头像显示用户名最后两个字
+- 个人信息编辑（部门、手机号、邮箱、性别、个性签名）
+- 密码修改
 
 ### 🏢 群组管理
 - 创建群聊
@@ -52,7 +68,7 @@
 | MySQL | 主数据库 | 8.0+ |
 | Redis | 缓存 | 7.0+ |
 | RabbitMQ | 消息队列 | 3.12+ |
-| MinIO | 对象存储 | 最新版 |
+| MinIO | 对象存储（可选，头像支持本地存储） | 最新版 |
 | Elasticsearch | 搜索引擎 | 8.12+ |
 | Netty | WebSocket服务 | 4.1.100 |
 | JWT | 认证 | 0.12.5 |
@@ -151,6 +167,11 @@ docker-compose up -d
 
 ```bash
 mysql -u root -p < sql/init.sql
+```
+
+**注意**：如果数据库已存在，需要手动添加 `department` 字段：
+```sql
+ALTER TABLE sys_user ADD COLUMN `department` VARCHAR(100) DEFAULT NULL COMMENT '部门' AFTER `signature`;
 ```
 
 ### 4. 启动后端服务
@@ -300,6 +321,18 @@ jwt:
   secret: your_jwt_secret_key
   expiration: 86400000  # 24小时
   refresh-expiration: 604800000  # 7天
+```
+
+### 文件上传配置
+
+头像文件默认保存在项目根目录的 `upload/avatar/` 文件夹下。如需使用 MinIO 存储，请配置：
+
+```yaml
+minio:
+  endpoint: http://localhost:9000
+  access-key: your_access_key
+  secret-key: your_secret_key
+  bucket-name: kwchat
 ```
 
 ## 📊 监控
