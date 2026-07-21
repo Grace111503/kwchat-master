@@ -1,5 +1,5 @@
 <template>
-  <div class="message-bubble-wrapper" :class="{ 'is-self': isSelf }">
+  <div class="message-bubble-wrapper" :class="{ 'is-self': isSelf, 'is-selected': isSelected }">
     <el-avatar
       :size="34"
       :src="message.senderAvatar"
@@ -116,6 +116,7 @@
       @forward="handleForward"
       @reply="handleReply"
       @delete="handleDeleteMessage"
+      @translate="handleTranslateMessage"
     />
   </div>
 </template>
@@ -132,10 +133,11 @@ dayjs.locale('zh-cn')
 
 const props = defineProps({
   message: { type: Object, required: true },
-  isSelf: { type: Boolean, default: false }
+  isSelf: { type: Boolean, default: false },
+  isSelected: { type: Boolean, default: false }
 })
 
-const emit = defineEmits(['play-voice', 'download', 'play-video', 'click-avatar', 'recall', 'forward', 'reply', 'delete'])
+const emit = defineEmits(['play-voice', 'download', 'play-video', 'click-avatar', 'recall', 'forward', 'reply', 'delete', 'translate'])
 const isPlaying = ref(false)
 
 // 获取头像 fallback 文字（显示最后两个字）
@@ -241,6 +243,10 @@ const handleDeleteMessage = (message) => {
   emit('delete', message)
 }
 
+const handleTranslateMessage = (message) => {
+  emit('translate', message)
+}
+
 const getReplyPreviewText = () => {
   if (props.message.replyContent) {
     return props.message.replyContent.substring(0, 40) + (props.message.replyContent.length > 40 ? '...' : '')
@@ -254,6 +260,20 @@ const getReplyPreviewText = () => {
   display: flex;
   margin-bottom: 12px;
   padding: 0 16px;
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.02);
+  }
+
+  &.is-selected {
+    background: #e8f0fe;
+
+    .message-bubble {
+      border-color: #2b7fff;
+    }
+  }
 
   &.is-self {
     flex-direction: row-reverse;

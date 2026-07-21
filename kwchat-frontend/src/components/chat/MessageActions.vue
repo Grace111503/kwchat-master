@@ -38,6 +38,12 @@
           <span>收藏</span>
         </div>
 
+        <!-- 翻译 -->
+        <div class="menu-item" @click="handleTranslate" v-if="message.messageType === 1">
+          <el-icon><Translate /></el-icon>
+          <span>翻译</span>
+        </div>
+
         <!-- 多选 -->
         <div class="menu-item" @click="handleMultiSelect">
           <el-icon><Finished /></el-icon>
@@ -126,7 +132,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['reply', 'forward', 'recall', 'delete', 'copy', 'favorite'])
+const emit = defineEmits(['reply', 'forward', 'recall', 'delete', 'copy', 'favorite', 'multi-select', 'translate'])
 
 const chatStore = useChatStore()
 const showMenu = ref(false)
@@ -230,10 +236,17 @@ const handleFavorite = async () => {
   }
 }
 
+// 翻译消息
+const handleTranslate = () => {
+  showMenu.value = false
+  emit('translate', props.message)
+}
+
 // 多选
 const handleMultiSelect = () => {
   showMenu.value = false
   emit('multi-select', props.message)
+  ElMessage.info('已进入多选模式，点击消息选择')
 }
 
 // 撤回消息
