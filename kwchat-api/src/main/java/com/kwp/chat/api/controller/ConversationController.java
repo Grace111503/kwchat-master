@@ -48,7 +48,10 @@ public class ConversationController {
         Long userId = getCurrentUserId(request);
         String name = (String) body.get("name");
         @SuppressWarnings("unchecked")
-        List<Long> memberIds = (List<Long>) body.get("memberIds");
+        List<Object> rawMemberIds = (List<Object>) body.get("memberIds");
+        List<Long> memberIds = rawMemberIds != null
+                ? rawMemberIds.stream().map(id -> Long.valueOf(id.toString())).toList()
+                : List.of();
         Conversation conversation = conversationService.createGroupConversation(userId, name, memberIds);
         return Result.success(conversation);
     }
@@ -111,6 +114,54 @@ public class ConversationController {
         Long userId = getCurrentUserId(request);
         Integer isTop = body.get("isTop");
         conversationService.setTop(conversationId, userId, isTop);
+        return Result.success();
+    }
+
+    @Operation(summary = "更新群公告")
+    @PutMapping("/{conversationId}/announcement")
+    public Result<Void> updateAnnouncement(@PathVariable Long conversationId,
+                                           @RequestBody Map<String, String> body) {
+        String announcement = body.get("announcement");
+        conversationService.updateAnnouncement(conversationId, announcement);
+        return Result.success();
+    }
+
+    @Operation(summary = "更新群名称")
+    @PutMapping("/{conversationId}/name")
+    public Result<Void> updateGroupName(@PathVariable Long conversationId,
+                                        @RequestBody Map<String, String> body) {
+        String name = body.get("name");
+        conversationService.updateGroupName(conversationId, name);
+        return Result.success();
+    }
+
+    @Operation(summary = "更新群头像")
+    @PutMapping("/{conversationId}/avatar")
+    public Result<Void> updateGroupAvatar(@PathVariable Long conversationId,
+                                          @RequestBody Map<String, String> body) {
+        String avatar = body.get("avatar");
+        conversationService.updateGroupAvatar(conversationId, avatar);
+        return Result.success();
+    }
+
+    @Operation(summary = "解散群聊")
+    @DeleteMapping("/{conversationId}")
+    public Result<Void> dissolveGroup(HttpServletRequest request,
+                                      @PathVariable Long conversationId) {
+        Long userId = getCurrentUserId(request);
+        conversationService.dissolveGroup(conversationId, userId);
+        return Result.success();
+    }
+
+    @Operation(summary = "更新成员角色")
+    @PutMapping("/{conversationId}/members/{userId}/role")
+    public Result<Void> updateMemberRole(HttpServletRequest request,
+                                         @PathVariable Long conversationId,
+                                         @PathVariable Long userId,
+                                         @RequestBody Map<String, Integer> body) {
+        Long currentUserId = getCurrentUserId(request);
+        Integer role = body.get("role");
+        conversationService.updateMemberRole(conversationId, userId, role);
         return Result.success();
     }
 

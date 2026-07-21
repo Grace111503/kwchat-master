@@ -46,4 +46,9 @@ public interface MessageService {
      * 获取未读消息数
      */
     int getUnreadMessageCount(Long conversationId, Long userId);
+
+    /**
+     * 删除消息
+     */
+    void deleteMessage(Long messageId, Long userId);
 }

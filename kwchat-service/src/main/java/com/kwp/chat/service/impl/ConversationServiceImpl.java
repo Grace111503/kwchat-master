@@ -48,6 +48,8 @@ public class ConversationServiceImpl implements ConversationService {
         // 查找是否已存在单聊会话
         Conversation conversation = conversationMapper.selectPrivateConversation(userId1, userId2);
         if (conversation != null) {
+            // 确保成员记录存在
+            ensureMembersExist(conversation.getId(), userId1, userId2);
             fillPrivateConversationName(conversation, userId1);
             return conversation;
         }
@@ -71,6 +73,21 @@ public class ConversationServiceImpl implements ConversationService {
         log.info("创建单聊会话: userId1={}, userId2={}, conversationId={}", userId1, userId2, conversation.getId());
 
         return conversation;
+    }
+
+    /**
+     * 确保私聊会话的成员记录存在
+     */
+    private void ensureMembersExist(Long conversationId, Long userId1, Long userId2) {
+        ConversationMember member1 = conversationMemberMapper.selectByConversationIdAndUserId(conversationId, userId1);
+        if (member1 == null) {
+            addMember(conversationId, userId1, CommonConstant.GROUP_ROLE_MEMBER);
+        }
+
+        ConversationMember member2 = conversationMemberMapper.selectByConversationIdAndUserId(conversationId, userId2);
+        if (member2 == null) {
+            addMember(conversationId, userId2, CommonConstant.GROUP_ROLE_MEMBER);
+        }
     }
 
     @Override
@@ -191,6 +208,74 @@ public class ConversationServiceImpl implements ConversationService {
         }
 
         member.setIsTop(isTop);
+        conversationMemberMapper.updateById(member);
+    }
+
+    @Override
+    public void updateAnnouncement(Long conversationId, String announcement) {
+        Conversation conversation = conversationMapper.selectById(conversationId);
+        if (conversation == null) {
+            throw new BusinessException(ResultCode.CONVERSATION_NOT_FOUND);
+        }
+        conversation.setAnnouncement(announcement);
+        conversationMapper.updateById(conversation);
+    }
+
+    @Override
+    public void updateGroupName(Long conversationId, String name) {
+        Conversation conversation = conversationMapper.selectById(conversationId);
+        if (conversation == null) {
+            throw new BusinessException(ResultCode.CONVERSATION_NOT_FOUND);
+        }
+        conversation.setName(name);
+        conversationMapper.updateById(conversation);
+    }
+
+    @Override
+    public void updateGroupAvatar(Long conversationId, String avatar) {
+        Conversation conversation = conversationMapper.selectById(conversationId);
+        if (conversation == null) {
+            throw new BusinessException(ResultCode.CONVERSATION_NOT_FOUND);
+        }
+        conversation.setAvatar(avatar);
+        conversationMapper.updateById(conversation);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void dissolveGroup(Long conversationId, Long userId) {
+        Conversation conversation = conversationMapper.selectById(conversationId);
+        if (conversation == null) {
+            throw new BusinessException(ResultCode.CONVERSATION_NOT_FOUND);
+        }
+
+        // 检查是否是群主
+        ConversationMember member = conversationMemberMapper.selectByConversationIdAndUserId(conversationId, userId);
+        if (member == null || !CommonConstant.GROUP_ROLE_OWNER.equals(member.getRole())) {
+            throw new BusinessException(ResultCode.NOT_GROUP_OWNER);
+        }
+
+        // 软删除会话（设置 deleted = 1）
+        conversation.setDeleted(1);
+        conversationMapper.updateById(conversation);
+
+        // 删除所有群成员记录
+        List<ConversationMember> members = conversationMemberMapper.selectByConversationId(conversationId);
+        for (ConversationMember m : members) {
+            m.setDeleted(1);
+            conversationMemberMapper.updateById(m);
+        }
+
+        log.info("群聊已解散: conversationId={}, ownerId={}", conversationId, userId);
+    }
+
+    @Override
+    public void updateMemberRole(Long conversationId, Long userId, Integer role) {
+        ConversationMember member = conversationMemberMapper.selectByConversationIdAndUserId(conversationId, userId);
+        if (member == null) {
+            throw new BusinessException(ResultCode.GROUP_MEMBER_NOT_FOUND);
+        }
+        member.setRole(role);
         conversationMemberMapper.updateById(member);
     }
 

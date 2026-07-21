@@ -14,7 +14,7 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/kuaitong?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     username: root
-    password: root123456
+    password: root
     type: com.alibaba.druid.pool.DruidDataSource
     druid:
       initial-size: 5
@@ -49,7 +49,7 @@ spring:
     redis:
       host: localhost
       port: 6379
-      password: redis123
+      password: 123456
       database: 0
       timeout: 10000
       lettuce:
@@ -63,9 +63,9 @@ spring:
   rabbitmq:
     host: localhost
     port: 5672
-    username: tyy
-    password: tyy123456
-    virtual-host: kwchat
+    username: dev_admin
+    password: 123456
+    virtual-host: /dev
     listener:
       simple:
         acknowledge-mode: manual
@@ -78,6 +78,22 @@ spring:
     publisher-returns: true
     template:
       mandatory: true
+
+##spring:
+#rabbitmq:
+#  host: 127.0.0.1
+#  port: 5672
+#  virtual-host: /monitor
+#  username: monitor_user
+#  password: Monitor@654321
+#  listener:
+#    simple:
+#      acknowledge-mode: auto
+  #Elasticsearch配置
+  elasticsearch:
+    uris: http://localhost:9200
+    connection-timeout: 5s
+    socket-timeout: 30s
 
   # 文件上传配置
   servlet:
@@ -93,6 +109,15 @@ spring:
     default-property-inclusion: non_null
     serialization:
       write-dates-as-timestamps: false
+  ai:
+    openai:
+          api-key: ${OPENAI_API_KEY:}
+          base-url: https://api.openai.com/v1
+          chat:
+            options:
+              model: gpt-3.5-turbo
+              temperature: 0.7
+              max-tokens: 2000
 
 # MyBatis-Plus配置
 mybatis-plus:
@@ -117,6 +142,8 @@ minio:
   secret-key: minioadmin123
   bucket-name: kuaitong
   url: http://localhost:9000
+
+#Spring AI 配置(使用OpenAI兼容接口)
 
 # JWT配置
 jwt:
@@ -169,3 +196,4 @@ management:
   endpoint:
     health:
       show-details: always
+

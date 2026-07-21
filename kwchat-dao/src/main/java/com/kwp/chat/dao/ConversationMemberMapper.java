@@ -41,4 +41,10 @@ public interface ConversationMemberMapper extends BaseMapper<ConversationMember>
     @Update("UPDATE chat_conversation_member SET unread_count = unread_count + 1 " +
             "WHERE conversation_id = #{conversationId} AND user_id != #{senderId} AND deleted = 0")
     int incrementUnreadCount(@Param("conversationId") Long conversationId, @Param("senderId") Long senderId);
+
+    /**
+     * 查询会话中所有成员的用户ID
+     */
+    @Select("SELECT user_id FROM chat_conversation_member WHERE conversation_id = #{conversationId} AND deleted = 0")
+    List<Long> selectUserIdsByConversationId(@Param("conversationId") Long conversationId);
 }

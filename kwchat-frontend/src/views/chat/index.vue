@@ -38,7 +38,17 @@
             </span>
           </div>
           <div class="chat-actions">
-            <el-tooltip content="群信息" placement="bottom">
+            <el-tooltip content="搜索消息" placement="bottom">
+              <el-icon class="action-btn" @click="showMessageSearch = !showMessageSearch">
+                <Search />
+              </el-icon>
+            </el-tooltip>
+            <el-tooltip content="AI功能" placement="bottom">
+              <el-icon class="action-btn" @click="aiFeaturesRef?.toggleQuickActions()">
+                <Sparkles />
+              </el-icon>
+            </el-tooltip>
+            <el-tooltip :content="isGroupChat ? '群信息' : '用户信息'" placement="bottom">
               <el-icon class="action-btn" @click="showConversationInfo">
                 <InfoFilled />
               </el-icon>
@@ -58,24 +68,59 @@
           </div>
 
           <MessageBubble
-            v-for="message in chatStore.messages"
+            v-for="message in displayMessages"
             :key="message.id"
             :message="message"
             :is-self="message.senderId === userInfo?.id"
             @play-voice="handlePlayVoice"
             @download="handleDownload"
             @play-video="handlePlayVideo"
+            @click-avatar="handleAvatarClick"
+            @recall="handleRecallMessage"
+            @forward="handleForwardMessage"
+            @reply="handleReplyMessage"
+            @delete="handleDeleteMessage"
           />
+        </div>
+
+        <!-- 消息搜索框 -->
+        <div class="message-search" v-if="showMessageSearch">
+          <el-input
+            v-model="messageSearchKeyword"
+            placeholder="搜索聊天记录..."
+            prefix-icon="Search"
+            clearable
+            size="small"
+          />
+          <span class="search-count" v-if="messageSearchKeyword">
+            {{ filteredMessages.length }} 条结果
+          </span>
+        </div>
+
+        <!-- 正在输入提示 -->
+        <div class="typing-indicator" v-if="typingText">
+          <span>{{ typingText }}</span>
         </div>
 
         <!-- 输入区域 -->
         <ChatInput
           ref="chatInputRef"
           :disabled="false"
+          :is-group="isGroupChat"
+          :members="groupMembers"
+          :reply-message="replyMessage"
           @send="handleSendText"
           @send-image="handleSendImage"
           @send-file="handleSendFile"
+          @send-video="handleSendVideo"
           @typing="handleTyping"
+          @cancel-reply="cancelReply"
+        />
+
+        <AiFeatures
+          ref="aiFeaturesRef"
+          :conversation-id="chatStore.currentConversation?.id"
+          @select-suggestion="handleSelectSuggestion"
         />
       </template>
 
@@ -88,6 +133,19 @@
         </div>
       </template>
     </div>
+
+    <!-- 群信息面板 -->
+    <GroupInfoPanel
+      v-if="chatStore.currentConversation?.conversationType === 2"
+      v-model:visible="groupInfoVisible"
+      :conversation-id="chatStore.currentConversation?.id"
+    />
+
+    <!-- 用户信息面板 -->
+    <UserProfile
+      v-model:visible="userProfileVisible"
+      :user="selectedUser"
+    />
   </div>
 </template>
 
@@ -96,18 +154,51 @@ import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useUserStore } from '@/store/user'
 import { useChatStore } from '@/store/chat'
 import { ElMessage } from 'element-plus'
-import { uploadImage, uploadFile } from '@/api/file'
+import { uploadImage, uploadFile, uploadVideo } from '@/api/file'
+import { getConversationMembers } from '@/api/conversation'
+import { recallMessage } from '@/api/message'
+import websocketManager from '@/utils/websocket'
 import ConversationItem from '@/components/chat/ConversationItem.vue'
 import MessageBubble from '@/components/chat/MessageBubble.vue'
 import ChatInput from '@/components/chat/ChatInput.vue'
+import AiFeatures from '@/components/chat/AiFeatures.vue'
+import GroupInfoPanel from '@/components/chat/GroupInfoPanel.vue'
+import UserProfile from '@/components/chat/UserProfile.vue'
 
 const userStore = useUserStore()
 const chatStore = useChatStore()
 const userInfo = computed(() => userStore.userInfo)
 
 const searchKeyword = ref('')
+const messageSearchKeyword = ref('')
+const showMessageSearch = ref(false)
 const messageListRef = ref(null)
 const chatInputRef = ref(null)
+const aiFeaturesRef = ref(null)
+const groupInfoVisible = ref(false)
+const groupMembers = ref([])
+const userProfileVisible = ref(false)
+const selectedUser = ref(null)
+const typingUsers = ref([])
+const replyMessage = ref(null)
+
+// 是否为群聊
+const isGroupChat = computed(() => chatStore.currentConversation?.conversationType === 2)
+
+// 过滤消息（用于搜索）
+const filteredMessages = computed(() => {
+  if (!messageSearchKeyword.value) return chatStore.messages
+  const keyword = messageSearchKeyword.value.toLowerCase()
+  return chatStore.messages.filter(msg =>
+    msg.content?.toLowerCase().includes(keyword) ||
+    msg.fileName?.toLowerCase().includes(keyword)
+  )
+})
+
+// 显示的消息列表
+const displayMessages = computed(() => {
+  return messageSearchKeyword.value ? filteredMessages.value : chatStore.messages
+})
 
 const filteredConversations = computed(() => {
   if (!searchKeyword.value) return chatStore.conversations
@@ -118,12 +209,38 @@ const filteredConversations = computed(() => {
 
 const handleSelectConversation = async (conversation) => {
   await chatStore.selectConversation(conversation)
+  // 如果是群聊，加载群成员列表
+  if (conversation.conversationType === 2) {
+    await loadGroupMembers(conversation.id)
+  } else {
+    groupMembers.value = []
+  }
   scrollToBottom()
+}
+
+const loadGroupMembers = async (conversationId) => {
+  try {
+    const res = await getConversationMembers(conversationId)
+    if (res.code === 200) {
+      groupMembers.value = res.data || []
+    }
+  } catch (error) {
+    console.error('加载群成员失败:', error)
+  }
 }
 
 const handleSendText = async (content) => {
   if (!chatStore.currentConversation) return
-  await chatStore.sendMessage(chatStore.currentConversation.id, 1, content)
+  const extra = {}
+  // 如果有引用消息，添加引用信息
+  if (replyMessage.value) {
+    extra.replyMessageId = replyMessage.value.id
+    extra.replyContent = replyMessage.value.content
+    extra.replySenderName = replyMessage.value.senderName
+  }
+  await chatStore.sendMessage(chatStore.currentConversation.id, 1, content, extra)
+  // 清除引用状态
+  replyMessage.value = null
   scrollToBottom()
 }
 
@@ -163,11 +280,152 @@ const handleSendFile = async (file) => {
   }
 }
 
-const handleTyping = () => {}
-const handlePlayVoice = (message) => ElMessage.info('语音播放功能开发中')
+const handleSendVideo = async (file) => {
+  if (!chatStore.currentConversation) return
+  try {
+    const res = await uploadVideo(file)
+    if (res.code === 200) {
+      await chatStore.sendMessage(chatStore.currentConversation.id, 4, null, {
+        fileUrl: res.data.url,
+        fileName: res.data.originalFileName,
+        fileSize: res.data.fileSize,
+        fileType: res.data.fileType
+      })
+      scrollToBottom()
+    }
+  } catch (error) {
+    ElMessage.error('视频上传失败')
+  }
+}
+
+let typingTimer = null
+const handleTyping = () => {
+  if (!chatStore.currentConversation) return
+  // 发送正在输入事件
+  websocketManager.sendTyping(
+    chatStore.currentConversation.id,
+    chatStore.currentConversation.targetUserId
+  )
+}
+
+// 监听正在输入事件
+const handleTypingEvent = (data) => {
+  if (data.conversationId !== chatStore.currentConversation?.id) return
+  if (data.senderId === userInfo.value?.id) return
+
+  // 添加到正在输入列表
+  const existing = typingUsers.value.find(u => u.senderId === data.senderId)
+  if (!existing) {
+    typingUsers.value.push({
+      senderId: data.senderId,
+      senderName: data.senderName
+    })
+  }
+
+  // 3秒后自动移除
+  setTimeout(() => {
+    typingUsers.value = typingUsers.value.filter(u => u.senderId !== data.senderId)
+  }, 3000)
+}
+
+const typingText = computed(() => {
+  if (typingUsers.value.length === 0) return ''
+  if (typingUsers.value.length === 1) {
+    return `${typingUsers.value[0].senderName} 正在输入...`
+  }
+  return '多人正在输入...'
+})
+const handlePlayVoice = (message) => {
+  // 语音播放已在 MessageBubble 中处理
+}
 const handleDownload = (message) => { if (message.fileUrl) window.open(message.fileUrl, '_blank') }
 const handlePlayVideo = (message) => { if (message.fileUrl) window.open(message.fileUrl, '_blank') }
-const showConversationInfo = () => ElMessage.info('会话信息功能开发中')
+
+const handleRecallMessage = async (message) => {
+  try {
+    const res = await recallMessage(message.id)
+    if (res.code === 200) {
+      // 更新消息状态为已撤回
+      const msg = chatStore.messages.find(m => m.id === message.id)
+      if (msg) {
+        msg.messageType = 7
+        msg.content = null
+      }
+      ElMessage.success('消息已撤回')
+    }
+  } catch (error) {
+    ElMessage.error('撤回失败')
+  }
+}
+
+const handleForwardMessage = (data) => {
+  ElMessage.success('转发成功')
+}
+
+const handleDeleteMessage = (message) => {
+  // 从消息列表中移除
+  const index = chatStore.messages.findIndex(m => m.id === message.id)
+  if (index !== -1) {
+    chatStore.messages.splice(index, 1)
+  }
+}
+
+const handleReplyMessage = (message) => {
+  replyMessage.value = {
+    ...message,
+    senderName: message.senderName || '未知用户'
+  }
+}
+
+const cancelReply = () => {
+  replyMessage.value = null
+}
+
+const showConversationInfo = () => {
+  if (chatStore.currentConversation?.conversationType === 2) {
+    // 群聊 - 显示群信息
+    groupInfoVisible.value = true
+  } else {
+    // 单聊 - 显示对方用户信息
+    showUserProfile(targetUser.value)
+  }
+}
+
+// 获取对方用户信息（单聊时）
+const targetUser = computed(() => {
+  if (!chatStore.currentConversation || chatStore.currentConversation.conversationType !== 1) {
+    return null
+  }
+  // 从会话名称中获取对方信息
+  return {
+    id: chatStore.currentConversation.targetUserId,
+    nickname: chatStore.currentConversation.name,
+    avatar: chatStore.currentConversation.avatar
+  }
+})
+
+const showUserProfile = (user) => {
+  if (!user) return
+  selectedUser.value = user
+  userProfileVisible.value = true
+}
+
+const handleAvatarClick = (data) => {
+  // 如果是自己，不弹出
+  if (data.senderId === userInfo.value?.id) return
+  selectedUser.value = {
+    id: data.senderId,
+    nickname: data.senderName,
+    avatar: data.senderAvatar
+  }
+  userProfileVisible.value = true
+}
+
+const handleSelectSuggestion = async (suggestion) => {
+  if (!chatStore.currentConversation) return
+  await chatStore.sendMessage(chatStore.currentConversation.id, 1, suggestion)
+  scrollToBottom()
+}
 
 const scrollToBottom = () => {
   nextTick(() => {
@@ -200,7 +458,22 @@ watch(() => chatStore.messages.length, (newLen, oldLen) => {
   }
 })
 
-onMounted(() => { chatStore.loadConversations() })
+onMounted(() => {
+  // 如果会话列表为空或没有当前选中的会话，才重新加载
+  if (chatStore.conversations.length === 0 || !chatStore.currentConversation) {
+    chatStore.loadConversations()
+  }
+  // 如果当前是群聊，加载群成员
+  if (chatStore.currentConversation?.conversationType === 2) {
+    loadGroupMembers(chatStore.currentConversation.id)
+  }
+  // 监听正在输入事件
+  websocketManager.on('typing', handleTypingEvent)
+})
+
+onUnmounted(() => {
+  websocketManager.off('typing', handleTypingEvent)
+})
 </script>
 
 <style lang="scss" scoped>
@@ -328,6 +601,41 @@ onMounted(() => { chatStore.loadConversations() })
 
   p {
     font-size: 14px;
+  }
+}
+
+.typing-indicator {
+  padding: 4px 16px;
+  background: #fff;
+  border-top: 1px solid #f0f0f0;
+
+  span {
+    font-size: 12px;
+    color: #999;
+  }
+}
+
+.message-search {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background: #fff;
+  border-top: 1px solid #f0f0f0;
+
+  :deep(.el-input__wrapper) {
+    box-shadow: 0 0 0 1px #e0e0e0 inset;
+    border-radius: 4px;
+
+    &.is-focus {
+      box-shadow: 0 0 0 1px #2b7fff inset;
+    }
+  }
+
+  .search-count {
+    font-size: 12px;
+    color: #999;
+    white-space: nowrap;
   }
 }
 </style>

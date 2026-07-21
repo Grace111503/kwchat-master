@@ -5,11 +5,10 @@ import com.kwp.chat.websocket.manager.ChannelManager;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -18,11 +17,13 @@ import java.time.temporal.ChronoUnit;
  * 心跳检测处理器
  */
 @Slf4j
-@Component
-@RequiredArgsConstructor
 public class HeartbeatHandler extends ChannelInboundHandlerAdapter {
 
     private final ChannelManager channelManager;
+
+    public HeartbeatHandler(ChannelManager channelManager) {
+        this.channelManager = channelManager;
+    }
 
     /**
      * 心跳超时时间（秒）

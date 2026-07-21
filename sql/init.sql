@@ -174,6 +174,21 @@ CREATE TABLE IF NOT EXISTS `chat_message_read` (
     KEY `idx_user_id` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='消息已读状态表';
 
+-- 消息收藏表
+CREATE TABLE IF NOT EXISTS `chat_message_favorite` (
+    `id` BIGINT NOT NULL COMMENT 'ID',
+    `message_id` BIGINT NOT NULL COMMENT '消息ID',
+    `user_id` BIGINT NOT NULL COMMENT '用户ID',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    `create_by` VARCHAR(50) DEFAULT NULL COMMENT '创建者',
+    `update_by` VARCHAR(50) DEFAULT NULL COMMENT '更新者',
+    `deleted` TINYINT DEFAULT 0 COMMENT '删除标志（0：未删除，1：已删除）',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_message_user` (`message_id`, `user_id`),
+    KEY `idx_user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='消息收藏表';
+
 -- 用户置顶会话表
 CREATE TABLE IF NOT EXISTS `chat_user_top_conversation` (
     `id` BIGINT NOT NULL COMMENT 'ID',
@@ -188,6 +203,31 @@ CREATE TABLE IF NOT EXISTS `chat_user_top_conversation` (
     UNIQUE KEY `uk_user_conversation` (`user_id`, `conversation_id`),
     KEY `idx_conversation_id` (`conversation_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户置顶会话表';
+
+-- AI模型配置表
+CREATE TABLE IF NOT EXISTS `sys_ai_model_config` (
+    `id` BIGINT NOT NULL COMMENT 'ID',
+    `model_name` VARCHAR(100) NOT NULL COMMENT '模型名称',
+    `provider` VARCHAR(50) NOT NULL COMMENT '提供商（openai, anthropic, baidu, alibaba, xfyun, custom）',
+    `api_url` VARCHAR(500) NOT NULL COMMENT 'API地址',
+    `api_key` VARCHAR(500) NOT NULL COMMENT 'API密钥',
+    `model_id` VARCHAR(100) NOT NULL COMMENT '模型标识（如：gpt-3.5-turbo）',
+    `max_tokens` INT DEFAULT 4096 COMMENT '最大Token数',
+    `temperature` DOUBLE DEFAULT 0.7 COMMENT '温度参数',
+    `enabled` TINYINT DEFAULT 1 COMMENT '是否启用（0：禁用，1：启用）',
+    `is_default` TINYINT DEFAULT 0 COMMENT '是否默认模型（0：否，1：是）',
+    `sort_order` INT DEFAULT 0 COMMENT '排序',
+    `remark` VARCHAR(500) DEFAULT NULL COMMENT '备注',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    `create_by` VARCHAR(50) DEFAULT NULL COMMENT '创建者',
+    `update_by` VARCHAR(50) DEFAULT NULL COMMENT '更新者',
+    `deleted` TINYINT DEFAULT 0 COMMENT '删除标志（0：未删除，1：已删除）',
+    PRIMARY KEY (`id`),
+    KEY `idx_provider` (`provider`),
+    KEY `idx_enabled` (`enabled`),
+    KEY `idx_is_default` (`is_default`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='AI模型配置表';
 
 -- 初始化超级管理员账号
 INSERT INTO `sys_user` (`id`, `username`, `password`, `nickname`, `status`, `user_type`, `create_time`, `update_time`, `deleted`)

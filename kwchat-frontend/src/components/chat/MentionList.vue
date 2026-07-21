@@ -31,7 +31,7 @@
       <!-- 成员列表 -->
       <div
         v-for="member in filteredMembers"
-        :key="member.id"
+        :key="member.userId || member.id"
         class="mention-item"
         @click="selectMention(member)"
       >
@@ -59,6 +59,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { User } from '@element-plus/icons-vue'
 
 const props = defineProps({
   visible: {
@@ -93,7 +94,7 @@ const filteredMembers = computed(() => {
 
   const keyword = searchKeyword.value.toLowerCase()
   return props.members.filter(member =>
-    member.nickname?.toLowerCase().includes(keyword) ||
+    (member.nickname || member.username)?.toLowerCase().includes(keyword) ||
     member.username?.toLowerCase().includes(keyword)
   )
 })

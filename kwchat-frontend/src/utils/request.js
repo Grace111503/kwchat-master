@@ -56,8 +56,14 @@ service.interceptors.response.use(
       })
       return Promise.reject(new Error(res.message || '认证失败'))
     } else {
-      ElMessage.error(res.message || '请求失败')
-      return Promise.reject(new Error(res.message || '请求失败'))
+      // 某些业务错误不自动弹出提示，由调用方处理
+      const silentCodes = [3004] // 已发送过好友请求
+      if (!silentCodes.includes(res.code)) {
+        ElMessage.error(res.message || '请求失败')
+      }
+      const error = new Error(res.message || '请求失败')
+      error.code = res.code
+      return Promise.reject(error)
     }
   },
   error => {

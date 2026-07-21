@@ -3,6 +3,7 @@ package com.kwp.chat.api.controller;
 import com.kwp.chat.common.result.Result;
 import com.kwp.chat.model.dto.UserInfoResponse;
 import com.kwp.chat.model.friend.FriendRequest;
+import com.kwp.chat.model.user.User;
 import com.kwp.chat.service.FriendService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -94,6 +95,49 @@ public class FriendController {
         Long userId = getCurrentUserId(request);
         boolean isFriend = friendService.isFriend(userId, friendId);
         return Result.success(isFriend);
+    }
+
+    @Operation(summary = "拉黑好友")
+    @PutMapping("/{friendId}/black")
+    public Result<Void> blackFriend(HttpServletRequest request, @PathVariable Long friendId) {
+        Long userId = getCurrentUserId(request);
+        friendService.blackFriend(userId, friendId);
+        return Result.success();
+    }
+
+    @Operation(summary = "取消拉黑")
+    @PutMapping("/{friendId}/unblack")
+    public Result<Void> unblackFriend(HttpServletRequest request, @PathVariable Long friendId) {
+        Long userId = getCurrentUserId(request);
+        friendService.unblackFriend(userId, friendId);
+        return Result.success();
+    }
+
+    @Operation(summary = "获取黑名单列表")
+    @GetMapping("/blacklist")
+    public Result<List<User>> getBlacklist(HttpServletRequest request) {
+        Long userId = getCurrentUserId(request);
+        List<User> blacklist = friendService.getBlacklist(userId);
+        return Result.success(blacklist);
+    }
+
+    @Operation(summary = "更新好友分组")
+    @PutMapping("/{friendId}/group")
+    public Result<Void> updateFriendGroup(HttpServletRequest request,
+                                          @PathVariable Long friendId,
+                                          @RequestBody Map<String, String> body) {
+        Long userId = getCurrentUserId(request);
+        String groupName = body.get("groupName");
+        friendService.updateFriendGroup(userId, friendId, groupName);
+        return Result.success();
+    }
+
+    @Operation(summary = "获取好友分组列表")
+    @GetMapping("/groups")
+    public Result<List<String>> getFriendGroups(HttpServletRequest request) {
+        Long userId = getCurrentUserId(request);
+        List<String> groups = friendService.getFriendGroups(userId);
+        return Result.success(groups);
     }
 
     /**

@@ -44,6 +44,7 @@ public class AdminServiceImpl implements AdminService {
     private final LoginLogMapper loginLogMapper;
     private final AiModelConfigMapper aiModelConfigMapper;
     private final RedisTemplate<String, Object> redisTemplate;
+    private final AiClientFactory aiClientFactory;
 
     @Override
     public DashboardStats getDashboardStats() {
@@ -275,10 +276,8 @@ public class AdminServiceImpl implements AdminService {
         }
 
         try {
-            // TODO: 实际测试AI模型连接
-            // 这里可以发送一个简单的测试请求
             log.info("测试AI模型连接: model={}", config.getModelName());
-            return true;
+            return aiClientFactory.testConnection(config);
         } catch (Exception e) {
             log.error("AI模型连接测试失败: {}", e.getMessage());
             return false;

@@ -9,7 +9,8 @@
           prefix-icon="Search"
           clearable
         />
-        <el-button type="primary" :icon="Plus" @click="showAddFriend" />
+        <el-button type="primary" :icon="Plus" @click="showAddFriend" title="添加好友" />
+        <el-button type="success" :icon="Plus" @click="showCreateGroup" title="创建群聊" />
       </div>
 
       <div class="contacts-tabs">
@@ -49,7 +50,7 @@
             :key="group.id"
             class="contact-item"
             :class="{ active: selectedContact?.id === group.id }"
-            @click="selectContact(group)"
+            @click="startGroupChat(group)"
           >
             <el-avatar :size="38" :src="group.avatar" shape="square">
               {{ getAvatarFallback(group.name) }}
@@ -82,6 +83,26 @@
             </div>
           </div>
         </template>
+
+        <template v-if="activeTab === 'blacklist'">
+          <div
+            v-for="user in blacklist"
+            :key="user.id"
+            class="contact-item"
+          >
+            <el-avatar :size="38" :src="user.avatar" shape="square">
+              {{ getAvatarFallback(user.nickname) }}
+            </el-avatar>
+            <div class="contact-info">
+              <div class="contact-name">{{ user.nickname || user.username }}</div>
+              <div class="contact-signature">{{ user.username }}</div>
+            </div>
+            <el-button type="danger" size="small" link @click="handleUnblackFriend(user)">取消拉黑</el-button>
+          </div>
+          <div v-if="blacklist.length === 0" class="empty-tip">
+            <span>暂无黑名单</span>
+          </div>
+        </template>
       </div>
     </div>
 
@@ -102,6 +123,22 @@
           <div class="info-item">
             <span class="info-label">用户名</span>
             <span class="info-value">{{ selectedContact.username || '未设置' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">分组</span>
+            <span class="info-value">
+              <el-select
+                v-model="selectedContact.groupName"
+                placeholder="选择分组"
+                size="small"
+                allow-create
+                filterable
+                @change="handleGroupChange"
+              >
+                <el-option label="默认分组" value="" />
+                <el-option v-for="group in friendGroups" :key="group" :label="group" :value="group" />
+              </el-select>
+            </span>
           </div>
           <div class="info-item">
             <span class="info-label">部门</span>
@@ -133,6 +170,10 @@
           <el-button @click="editRemark">
             <el-icon><Edit /></el-icon>
             修改备注
+          </el-button>
+          <el-button type="warning" plain @click="handleBlackFriend">
+            <el-icon><Warning /></el-icon>
+            拉黑
           </el-button>
           <el-button type="danger" plain @click="deleteFriendAction">
             <el-icon><Delete /></el-icon>
@@ -187,6 +228,72 @@
         <el-button @click="addFriendVisible = false">取消</el-button>
       </template>
     </el-dialog>
+
+    <!-- 编辑备注对话框 -->
+    <el-dialog v-model="editRemarkVisible" title="修改备注" width="400px">
+      <el-form :model="editRemarkForm" label-width="80px">
+        <el-form-item label="备注名">
+          <el-input
+            v-model="editRemarkForm.remark"
+            placeholder="请输入备注名"
+            maxlength="50"
+            show-word-limit
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="editRemarkVisible = false">取消</el-button>
+        <el-button type="primary" @click="saveRemark">保存</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 创建群聊对话框 -->
+    <el-dialog v-model="createGroupVisible" title="创建群聊" width="450px">
+      <el-form :model="createGroupForm" label-width="80px">
+        <el-form-item label="群聊名称">
+          <el-input
+            v-model="createGroupForm.name"
+            placeholder="请输入群聊名称"
+            maxlength="50"
+            show-word-limit
+          />
+        </el-form-item>
+        <el-form-item label="选择成员">
+          <div class="group-member-select">
+            <div class="selected-members" v-if="createGroupForm.memberIds.length > 0">
+              <el-tag
+                v-for="memberId in createGroupForm.memberIds"
+                :key="memberId"
+                closable
+                @close="removeGroupMember(memberId)"
+              >
+                {{ getFriendName(memberId) }}
+              </el-tag>
+            </div>
+            <div class="friend-list-select">
+              <div
+                v-for="friend in friends"
+                :key="friend.id"
+                class="friend-select-item"
+                :class="{ selected: createGroupForm.memberIds.includes(friend.id) }"
+                @click="toggleGroupMember(friend.id)"
+              >
+                <el-avatar :size="32" :src="friend.avatar" shape="square">
+                  {{ getAvatarFallback(friend.nickname) }}
+                </el-avatar>
+                <span class="friend-select-name">{{ friend.remark || friend.nickname }}</span>
+                <el-icon v-if="createGroupForm.memberIds.includes(friend.id)" class="check-icon"><Check /></el-icon>
+              </div>
+            </div>
+          </div>
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <el-button @click="createGroupVisible = false">取消</el-button>
+        <el-button type="primary" :loading="createGroupLoading" @click="handleCreateGroup">创建</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -194,11 +301,11 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, Check, Warning } from '@element-plus/icons-vue'
 import { useChatStore } from '@/store/chat'
 import { useUserStore } from '@/store/user'
-import { getOrCreatePrivateConversation } from '@/api/conversation'
-import { getFriendList, getReceivedFriendRequests, deleteFriend, sendFriendRequest as sendFriendRequestApi, handleFriendRequest } from '@/api/friend'
+import { getOrCreatePrivateConversation, getConversationList, createGroupConversation } from '@/api/conversation'
+import { getFriendList, getReceivedFriendRequests, deleteFriend, sendFriendRequest as sendFriendRequestApi, handleFriendRequest, updateFriendRemark, blackFriend, unblackFriend, getBlacklist, updateFriendGroup, getFriendGroups } from '@/api/friend'
 import { searchUser as searchUserApi } from '@/api/user'
 
 const router = useRouter()
@@ -216,7 +323,8 @@ const activeTab = ref('friends')
 const tabs = [
   { key: 'friends', label: '好友' },
   { key: 'groups', label: '群聊' },
-  { key: 'requests', label: '好友请求' }
+  { key: 'requests', label: '好友请求' },
+  { key: 'blacklist', label: '黑名单' }
 ]
 const selectedContact = ref(null)
 const addFriendVisible = ref(false)
@@ -228,6 +336,17 @@ let searchTimer = null
 const friends = ref([])
 const groups = ref([])
 const friendRequests = ref([])
+const blacklist = ref([])
+const friendGroups = ref([])
+
+// 创建群聊相关状态
+const createGroupVisible = ref(false)
+const createGroupForm = ref({ name: '', memberIds: [] })
+const createGroupLoading = ref(false)
+
+// 编辑备注相关状态
+const editRemarkVisible = ref(false)
+const editRemarkForm = ref({ remark: '' })
 
 const filteredFriends = computed(() => {
   if (!searchKeyword.value) return friends.value
@@ -270,7 +389,29 @@ const startChat = async () => {
   }
 }
 
-const editRemark = () => ElMessage.info('编辑备注功能开发中')
+const editRemark = () => {
+  if (!selectedContact.value) return
+  editRemarkForm.value.remark = selectedContact.value.remark || ''
+  editRemarkVisible.value = true
+}
+
+const saveRemark = async () => {
+  if (!selectedContact.value) return
+  try {
+    const res = await updateFriendRemark(selectedContact.value.id, editRemarkForm.value.remark)
+    if (res.code === 200) {
+      // 更新本地数据
+      selectedContact.value.remark = editRemarkForm.value.remark
+      // 更新好友列表中的备注
+      const friend = friends.value.find(f => f.id === selectedContact.value.id)
+      if (friend) friend.remark = editRemarkForm.value.remark
+      ElMessage.success('备注修改成功')
+      editRemarkVisible.value = false
+    }
+  } catch (error) {
+    ElMessage.error('修改备注失败')
+  }
+}
 
 const deleteFriendAction = () => {
   if (!selectedContact.value) return
@@ -306,6 +447,7 @@ const searchUser = async (keyword) => {
     if (res.code === 200) { searchResults.value = res.data || []; searched.value = true }
   } catch (error) {
     searchResults.value = []; searched.value = true
+    ElMessage.error('搜索失败，请稍后重试')
   } finally {
     searchLoading.value = false
   }
@@ -322,7 +464,13 @@ const sendFriendRequest = async (user) => {
     const res = await sendFriendRequestApi(user.id, '请求添加好友')
     if (res.code === 200) { ElMessage.success('好友请求已发送'); addFriendVisible.value = false }
   } catch (error) {
-    console.error('发送好友请求失败:', error)
+    // 处理"已发送过好友请求"的情况
+    if (error.code === 3004) {
+      ElMessage.warning('已发送过好友请求，请等待对方处理')
+    } else {
+      console.error('发送好友请求失败:', error)
+      ElMessage.error(error.message || '发送好友请求失败')
+    }
   }
 }
 
@@ -357,9 +505,168 @@ const loadFriendRequests = async () => {
   }
 }
 
+const loadGroups = async () => {
+  try {
+    const res = await getConversationList()
+    if (res.code === 200) {
+      groups.value = (res.data || []).filter(c => c.conversationType === 2)
+    }
+  } catch (error) {
+    console.error('加载群聊列表失败:', error)
+  }
+}
+
+const loadBlacklist = async () => {
+  try {
+    const res = await getBlacklist()
+    if (res.code === 200) {
+      blacklist.value = res.data || []
+    }
+  } catch (error) {
+    console.error('加载黑名单失败:', error)
+  }
+}
+
+const loadFriendGroups = async () => {
+  try {
+    const res = await getFriendGroups()
+    if (res.code === 200) {
+      friendGroups.value = res.data || []
+    }
+  } catch (error) {
+    console.error('加载分组失败:', error)
+  }
+}
+
+const handleGroupChange = async (groupName) => {
+  if (!selectedContact.value) return
+  try {
+    await updateFriendGroup(selectedContact.value.id, groupName)
+    // 更新本地数据
+    selectedContact.value.groupName = groupName
+    const friend = friends.value.find(f => f.id === selectedContact.value.id)
+    if (friend) friend.groupName = groupName
+    ElMessage.success('分组修改成功')
+  } catch (error) {
+    ElMessage.error('修改分组失败')
+  }
+}
+
+const handleBlackFriend = async () => {
+  if (!selectedContact.value) return
+  try {
+    await ElMessageBox.confirm(`确定要拉黑 ${selectedContact.value.nickname || selectedContact.value.username} 吗？`, '拉黑好友', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    await blackFriend(selectedContact.value.id)
+    ElMessage.success('已拉黑')
+    selectedContact.value = null
+    loadFriends()
+    loadBlacklist()
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('操作失败')
+    }
+  }
+}
+
+const handleUnblackFriend = async (user) => {
+  try {
+    await ElMessageBox.confirm(`确定要取消拉黑 ${user.nickname || user.username} 吗？`, '取消拉黑', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    await unblackFriend(user.id)
+    ElMessage.success('已取消拉黑')
+    loadBlacklist()
+    loadFriends()
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('操作失败')
+    }
+  }
+}
+
+const showCreateGroup = () => {
+  createGroupVisible.value = true
+  createGroupForm.value = { name: '', memberIds: [] }
+}
+
+const handleCreateGroup = async () => {
+  if (!createGroupForm.value.name.trim()) {
+    ElMessage.warning('请输入群聊名称')
+    return
+  }
+  if (createGroupForm.value.memberIds.length === 0) {
+    ElMessage.warning('请选择至少一位好友')
+    return
+  }
+  createGroupLoading.value = true
+  try {
+    const res = await createGroupConversation({
+      name: createGroupForm.value.name.trim(),
+      memberIds: createGroupForm.value.memberIds
+    })
+    if (res.code === 200) {
+      ElMessage.success('群聊创建成功')
+      createGroupVisible.value = false
+      // 重新加载会话列表（确保包含新创建的群聊）
+      await chatStore.loadConversations()
+      // 找到新创建的会话并选中
+      const conversation = chatStore.conversations.find(c => c.id === res.data.id)
+      if (conversation) {
+        await chatStore.selectConversation(conversation)
+      }
+      router.push('/chat')
+    }
+  } catch (error) {
+    ElMessage.error('创建群聊失败')
+  } finally {
+    createGroupLoading.value = false
+  }
+}
+
+const startGroupChat = async (group) => {
+  try {
+    const exists = chatStore.conversations.find(c => c.id === group.id)
+    if (!exists) chatStore.conversations.unshift(group)
+    await chatStore.selectConversation(group)
+    router.push('/chat')
+  } catch (error) {
+    ElMessage.error('打开群聊失败')
+  }
+}
+
+const toggleGroupMember = (friendId) => {
+  const index = createGroupForm.value.memberIds.indexOf(friendId)
+  if (index === -1) {
+    createGroupForm.value.memberIds.push(friendId)
+  } else {
+    createGroupForm.value.memberIds.splice(index, 1)
+  }
+}
+
+const removeGroupMember = (friendId) => {
+  const index = createGroupForm.value.memberIds.indexOf(friendId)
+  if (index !== -1) {
+    createGroupForm.value.memberIds.splice(index, 1)
+  }
+}
+
+const getFriendName = (friendId) => {
+  const friend = friends.value.find(f => f.id === friendId)
+  return friend ? (friend.remark || friend.nickname) : '未知用户'
+}
+
 onMounted(() => {
   loadFriends()
   loadFriendRequests()
+  loadGroups()
+  loadBlacklist()
+  loadFriendGroups()
   chatStore.clearUnreadFriendRequests()
 })
 </script>
@@ -582,5 +889,51 @@ onMounted(() => {
 .result-username {
   font-size: 12px;
   color: #999;
+}
+
+.group-member-select {
+  width: 100%;
+}
+
+.selected-members {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #eee;
+}
+
+.friend-list-select {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.friend-select-item {
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.15s;
+
+  &:hover {
+    background: #f5f5f5;
+  }
+
+  &.selected {
+    background: #e8f0fe;
+  }
+}
+
+.friend-select-name {
+  flex: 1;
+  margin-left: 8px;
+  font-size: 14px;
+  color: #333;
+}
+
+.check-icon {
+  color: #2b7fff;
 }
 </style>

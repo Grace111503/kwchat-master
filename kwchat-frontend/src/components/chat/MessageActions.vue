@@ -113,6 +113,7 @@
 import { ref, computed } from 'vue'
 import { useChatStore } from '@/store/chat'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { favoriteMessage, unfavoriteMessage, deleteMessage } from '@/api/message'
 
 const props = defineProps({
   message: {
@@ -218,10 +219,15 @@ const handleCopy = () => {
 }
 
 // 收藏消息
-const handleFavorite = () => {
+const handleFavorite = async () => {
   showMenu.value = false
-  ElMessage.success('已收藏')
-  emit('favorite', props.message)
+  try {
+    await favoriteMessage(props.message.id)
+    ElMessage.success('已收藏')
+    emit('favorite', props.message)
+  } catch (error) {
+    ElMessage.error('收藏失败')
+  }
 }
 
 // 多选
@@ -258,9 +264,13 @@ const handleDelete = async () => {
       type: 'warning'
     })
 
+    await deleteMessage(props.message.id)
+    ElMessage.success('消息已删除')
     emit('delete', props.message)
-  } catch {
-    // 取消
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('删除失败')
+    }
   }
 }
 </script>

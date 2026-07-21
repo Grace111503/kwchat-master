@@ -4,29 +4,38 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kwp.chat.common.model.WsMessage;
 import com.kwp.chat.common.model.WsSession;
 import com.kwp.chat.common.utils.JwtUtils;
+import com.kwp.chat.dao.ConversationMemberMapper;
 import com.kwp.chat.websocket.manager.ChannelManager;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 /**
  * WebSocket处理器
  */
 @Slf4j
-@Component
-@RequiredArgsConstructor
 public class WebSocketHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
 
     private final ChannelManager channelManager;
     private final JwtUtils jwtUtils;
     private final ObjectMapper objectMapper;
+    private final ConversationMemberMapper conversationMemberMapper;
+
+    public WebSocketHandler(ChannelManager channelManager, JwtUtils jwtUtils, ObjectMapper objectMapper,
+                           ConversationMemberMapper conversationMemberMapper) {
+        this.channelManager = channelManager;
+        this.jwtUtils = jwtUtils;
+        this.objectMapper = objectMapper;
+        this.conversationMemberMapper = conversationMemberMapper;
+    }
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
@@ -238,13 +247,25 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<WebSocketFrame
         Long receiverId = message.getReceiverId();
         Long conversationId = message.getConversationId();
 
-        if (receiverId != null) {
-            // 单聊消息
-            channelManager.sendToUser(receiverId, message.toString());
-        } else if (conversationId != null) {
-            // 群聊消息 - 需要从数据库获取群成员
-            // 这里简化处理，实际应该查询群成员
-            channelManager.sendToUser(senderId, message.toString());
+        try {
+            String jsonMessage = objectMapper.writeValueAsString(message);
+
+            if (receiverId != null) {
+                // 单聊消息
+                channelManager.sendToUser(receiverId, jsonMessage);
+            } else if (conversationId != null) {
+                // 群聊消息 - 查询群成员并广播给所有在线成员
+                List<Long> memberUserIds = conversationMemberMapper.selectUserIdsByConversationId(conversationId);
+                if (memberUserIds != null && !memberUserIds.isEmpty()) {
+                    Set<Long> userIds = new HashSet<>(memberUserIds);
+                    // 排除发送者，避免收到自己的回显
+                    userIds.remove(senderId);
+                    channelManager.sendToUsers(userIds, jsonMessage);
+                }
+            }
+        } catch (Exception e) {
+            log.error("序列化聊天消息失败: {}", e.getMessage());
+            sendError(channel, "消息发送失败");
         }
     }
 
@@ -260,7 +281,11 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<WebSocketFrame
         // 转发已读回执
         Long receiverId = message.getReceiverId();
         if (receiverId != null) {
-            channelManager.sendToUser(receiverId, message.toString());
+            try {
+                channelManager.sendToUser(receiverId, objectMapper.writeValueAsString(message));
+            } catch (Exception e) {
+                log.error("序列化已读回执失败: {}", e.getMessage());
+            }
         }
     }
 
@@ -276,7 +301,11 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<WebSocketFrame
         // 转发输入状态
         Long receiverId = message.getReceiverId();
         if (receiverId != null) {
-            channelManager.sendToUser(receiverId, message.toString());
+            try {
+                channelManager.sendToUser(receiverId, objectMapper.writeValueAsString(message));
+            } catch (Exception e) {
+                log.error("序列化输入状态失败: {}", e.getMessage());
+            }
         }
     }
 

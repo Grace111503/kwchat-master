@@ -7,7 +7,7 @@ export function sendFriendRequest(receiverId, message) {
   return request({
     url: '/friend/request',
     method: 'post',
-    params: { receiverId: String(receiverId), message }
+    params: { receiverId: String(receiverId), message: message || '' }
   })
 }
 
@@ -70,6 +70,57 @@ export function updateFriendRemark(friendId, remark) {
     url: `/friend/${String(friendId)}/remark`,
     method: 'put',
     data: { remark }
+  })
+}
+
+/**
+ * 拉黑好友
+ */
+export function blackFriend(friendId) {
+  return request({
+    url: `/friend/${String(friendId)}/black`,
+    method: 'put'
+  })
+}
+
+/**
+ * 取消拉黑
+ */
+export function unblackFriend(friendId) {
+  return request({
+    url: `/friend/${String(friendId)}/unblack`,
+    method: 'put'
+  })
+}
+
+/**
+ * 获取黑名单列表
+ */
+export function getBlacklist() {
+  return request({
+    url: '/friend/blacklist',
+    method: 'get'
+  })
+}
+
+/**
+ * 更新好友分组
+ */
+export function updateFriendGroup(friendId, groupName) {
+  return request({
+    url: `/friend/${String(friendId)}/group`,
+    method: 'put',
+    data: { groupName }
+  })
+}
+
+/**
+ * 获取好友分组列表
+ */
+export function getFriendGroups() {
+  return request({
+    url: '/friend/groups',
+    method: 'get'
   })
 }
 

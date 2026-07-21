@@ -68,9 +68,9 @@ services:
       - "5672:5672"
       - "15672:15672"
     environment:
-      RABBITMQ_DEFAULT_USER: tyy
-      RABBITMQ_DEFAULT_PASS: tyy123456
-      RABBITMQ_DEFAULT_VHOST: kwchat
+      RABBITMQ_DEFAULT_USER: dev_admin
+      RABBITMQ_DEFAULT_PASS: 123456
+      RABBITMQ_DEFAULT_VHOST: /dev
       TZ: Asia/Shanghai
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq

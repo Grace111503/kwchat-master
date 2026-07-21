@@ -2,6 +2,7 @@ package com.kwp.chat.service;
 
 import com.kwp.chat.model.dto.UserInfoResponse;
 import com.kwp.chat.model.friend.FriendRequest;
+import com.kwp.chat.model.user.User;
 
 import java.util.List;
 
@@ -49,4 +50,29 @@ public interface FriendService {
      * 检查是否是好友
      */
     boolean isFriend(Long userId, Long friendId);
+
+    /**
+     * 拉黑好友
+     */
+    void blackFriend(Long userId, Long friendId);
+
+    /**
+     * 取消拉黑
+     */
+    void unblackFriend(Long userId, Long friendId);
+
+    /**
+     * 获取黑名单列表
+     */
+    List<User> getBlacklist(Long userId);
+
+    /**
+     * 更新好友分组
+     */
+    void updateFriendGroup(Long userId, Long friendId, String groupName);
+
+    /**
+     * 获取好友分组列表
+     */
+    List<String> getFriendGroups(Long userId);
 }

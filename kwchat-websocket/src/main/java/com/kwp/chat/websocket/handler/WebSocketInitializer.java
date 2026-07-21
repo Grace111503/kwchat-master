@@ -1,5 +1,9 @@
 package com.kwp.chat.websocket.handler;
 
+import com.kwp.chat.websocket.manager.ChannelManager;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.kwp.chat.common.utils.JwtUtils;
+import com.kwp.chat.dao.ConversationMemberMapper;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
@@ -21,8 +25,10 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class WebSocketInitializer extends ChannelInitializer<SocketChannel> {
 
-    private final WebSocketHandler webSocketHandler;
-    private final HeartbeatHandler heartbeatHandler;
+    private final ChannelManager channelManager;
+    private final JwtUtils jwtUtils;
+    private final ObjectMapper objectMapper;
+    private final ConversationMemberMapper conversationMemberMapper;
 
     @Override
     protected void initChannel(SocketChannel ch) throws Exception {
@@ -43,10 +49,10 @@ public class WebSocketInitializer extends ChannelInitializer<SocketChannel> {
         // 空闲状态检测（读空闲60秒，写空闲30秒，全部空闲90秒）
         pipeline.addLast(new IdleStateHandler(60, 30, 90, TimeUnit.SECONDS));
 
-        // 心跳处理器
-        pipeline.addLast(heartbeatHandler);
+        // 心跳处理器 - 每次创建新实例
+        pipeline.addLast(new HeartbeatHandler(channelManager));
 
-        // WebSocket消息处理器
-        pipeline.addLast(webSocketHandler);
+        // WebSocket消息处理器 - 每次创建新实例
+        pipeline.addLast(new WebSocketHandler(channelManager, jwtUtils, objectMapper, conversationMemberMapper));
     }
 }

@@ -185,7 +185,7 @@ public class UserServiceImpl implements UserService {
             user.setGender(request.getGender());
         }
         if (request.getBirthday() != null) {
-            user.setBirthday(request.getBirthday());
+            user.setBirthday(request.getBirthday().atStartOfDay());
         }
         if (request.getSignature() != null) {
             user.setSignature(request.getSignature());

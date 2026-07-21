@@ -104,3 +104,57 @@ export function setTop(conversationId, isTop) {
     data: { isTop }
   })
 }
+
+/**
+ * 更新群公告
+ */
+export function updateAnnouncement(conversationId, announcement) {
+  return request({
+    url: `/conversation/${String(conversationId)}/announcement`,
+    method: 'put',
+    data: { announcement }
+  })
+}
+
+/**
+ * 更新群名称
+ */
+export function updateGroupName(conversationId, name) {
+  return request({
+    url: `/conversation/${String(conversationId)}/name`,
+    method: 'put',
+    data: { name }
+  })
+}
+
+/**
+ * 更新群头像
+ */
+export function updateGroupAvatar(conversationId, avatar) {
+  return request({
+    url: `/conversation/${String(conversationId)}/avatar`,
+    method: 'put',
+    data: { avatar }
+  })
+}
+
+/**
+ * 解散群聊
+ */
+export function dissolveGroup(conversationId) {
+  return request({
+    url: `/conversation/${String(conversationId)}`,
+    method: 'delete'
+  })
+}
+
+/**
+ * 更新成员角色
+ */
+export function updateMemberRole(conversationId, userId, role) {
+  return request({
+    url: `/conversation/${String(conversationId)}/members/${String(userId)}/role`,
+    method: 'put',
+    data: { role }
+  })
+}

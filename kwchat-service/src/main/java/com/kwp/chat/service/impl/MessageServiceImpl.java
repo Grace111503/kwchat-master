@@ -202,6 +202,25 @@ public class MessageServiceImpl implements MessageService {
         return member.getUnreadCount();
     }
 
+    @Override
+    public void deleteMessage(Long messageId, Long userId) {
+        Message message = messageMapper.selectById(messageId);
+        if (message == null) {
+            throw new BusinessException(ResultCode.MESSAGE_NOT_FOUND);
+        }
+
+        // 只能删除自己的消息
+        if (!message.getSenderId().equals(userId)) {
+            throw new BusinessException(ResultCode.FORBIDDEN);
+        }
+
+        // 软删除
+        message.setStatus(2);
+        messageMapper.updateById(message);
+
+        log.info("消息已删除: messageId={}, userId={}", messageId, userId);
+    }
+
     /**
      * 获取最后消息内容显示
      */

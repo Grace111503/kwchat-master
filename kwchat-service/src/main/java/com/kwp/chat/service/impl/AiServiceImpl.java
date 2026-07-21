@@ -2,44 +2,35 @@ package com.kwp.chat.service.impl;
 
 import com.kwp.chat.common.exception.BusinessException;
 import com.kwp.chat.common.result.ResultCode;
+import com.kwp.chat.dao.AiModelConfigMapper;
 import com.kwp.chat.dao.MessageMapper;
 import com.kwp.chat.model.dto.AiResponse;
 import com.kwp.chat.model.message.Message;
+import com.kwp.chat.model.system.AiModelConfig;
 import com.kwp.chat.service.AiService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * AI服务实现类
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class AiServiceImpl implements AiService {
 
     private final MessageMapper messageMapper;
-
-    @Value("${ai.enabled:false}")
-    private boolean aiEnabled;
-
-    @Value("${ai.api-key:}")
-    private String apiKey;
-
-    @Value("${ai.model:gpt-3.5-turbo}")
-    private String model;
+    private final AiModelConfigMapper aiModelConfigMapper;
+    private final AiClientFactory aiClientFactory;
 
     @Override
     public AiResponse generateSummary(Long conversationId, Integer messageLimit, String summaryType) {
         long startTime = System.currentTimeMillis();
 
         try {
-            // 获取最近的聊天记录
             List<Message> messages = messageMapper.selectByConversationId(conversationId, messageLimit, 0);
 
             if (messages.isEmpty()) {
@@ -49,13 +40,12 @@ public class AiServiceImpl implements AiService {
                         .build();
             }
 
-            // 构建聊天记录文本
             String chatHistory = buildChatHistory(messages);
 
-            // 生成摘要
             String summary;
-            if (aiEnabled) {
-                summary = callAiForSummary(chatHistory, summaryType);
+            AiModelConfig config = getDefaultAiConfig();
+            if (config != null) {
+                summary = callAiForSummary(config, chatHistory, summaryType);
             } else {
                 summary = generateLocalSummary(messages, summaryType);
             }
@@ -78,8 +68,9 @@ public class AiServiceImpl implements AiService {
 
         try {
             String translatedText;
-            if (aiEnabled) {
-                translatedText = callAiForTranslation(text, sourceLanguage, targetLanguage);
+            AiModelConfig config = getDefaultAiConfig();
+            if (config != null) {
+                translatedText = callAiForTranslation(config, text, sourceLanguage, targetLanguage);
             } else {
                 translatedText = generateLocalTranslation(text, targetLanguage);
             }
@@ -112,15 +103,15 @@ public class AiServiceImpl implements AiService {
     @Override
     public List<String> suggestReplies(Long conversationId) {
         try {
-            // 获取最近的聊天记录
             List<Message> messages = messageMapper.selectByConversationId(conversationId, 10, 0);
 
             if (messages.isEmpty()) {
                 return getDefaultSuggestions();
             }
 
-            if (aiEnabled) {
-                return callAiForSuggestions(messages);
+            AiModelConfig config = getDefaultAiConfig();
+            if (config != null) {
+                return callAiForSuggestions(config, messages);
             } else {
                 return getDefaultSuggestions();
             }
@@ -131,9 +122,17 @@ public class AiServiceImpl implements AiService {
         }
     }
 
-    /**
-     * 构建聊天记录文本
-     */
+    private AiModelConfig getDefaultAiConfig() {
+        AiModelConfig config = aiModelConfigMapper.selectDefaultModel();
+        if (config == null) {
+            List<AiModelConfig> enabledModels = aiModelConfigMapper.selectEnabledModels();
+            if (!enabledModels.isEmpty()) {
+                config = enabledModels.get(0);
+            }
+        }
+        return config;
+    }
+
     private String buildChatHistory(List<Message> messages) {
         return messages.stream()
                 .map(msg -> {
@@ -147,62 +146,91 @@ public class AiServiceImpl implements AiService {
                 .collect(Collectors.joining("\n"));
     }
 
-    /**
-     * 获取消息类型描述
-     */
     private String getMessageTypeDesc(Integer messageType) {
-        return switch (messageType) {
-            case 2 -> "[图片]";
-            case 3 -> "[文件]";
-            case 4 -> "[视频]";
-            case 5 -> "[语音]";
-            case 6 -> "[系统消息]";
-            case 7 -> "[消息已撤回]";
-            default -> "[消息]";
-        };
+        if (messageType == 2) {
+            return "[图片]";
+        } else if (messageType == 3) {
+            return "[文件]";
+        } else if (messageType == 4) {
+            return "[视频]";
+        } else if (messageType == 5) {
+            return "[语音]";
+        } else if (messageType == 6) {
+            return "[系统消息]";
+        } else if (messageType == 7) {
+            return "[消息已撤回]";
+        }
+        return "[消息]";
     }
 
-    /**
-     * 调用AI生成摘要（真实实现）
-     */
-    private String callAiForSummary(String chatHistory, String summaryType) {
-        // TODO: 接入真实的AI API（如OpenAI、Claude等）
-        // 这里是示例代码框架
+    private String callAiForSummary(AiModelConfig config, String chatHistory, String summaryType) {
+        ChatClient client = aiClientFactory.getChatClient(config);
 
-        String prompt = switch (summaryType) {
-            case "detailed" -> "请详细总结以下聊天记录，包括主要讨论的话题、达成的共识和待办事项：\n\n";
-            case "key_points" -> "请提取以下聊天记录的关键要点，以列表形式呈现：\n\n";
-            default -> "请简要总结以下聊天记录的主要内容：\n\n";
-        };
+        String prompt;
+        if ("detailed".equals(summaryType)) {
+            prompt = "请详细总结以下聊天记录，包括主要讨论的话题、达成的共识和待办事项：\n\n";
+        } else if ("key_points".equals(summaryType)) {
+            prompt = "请提取以下聊天记录的关键要点，以列表形式呈现：\n\n";
+        } else {
+            prompt = "请简要总结以下聊天记录的主要内容：\n\n";
+        }
 
-        // 模拟AI响应
-        return generateLocalSummary(null, summaryType);
+        String response = client.prompt(prompt + chatHistory)
+                .call()
+                .content();
+
+        log.info("AI summary generated successfully, model: {}, type: {}", config.getModelName(), summaryType);
+        return response;
     }
 
-    /**
-     * 调用AI进行翻译（真实实现）
-     */
-    private String callAiForTranslation(String text, String sourceLanguage, String targetLanguage) {
-        // TODO: 接入真实的AI API
-        // 这里是示例代码框架
+    private String callAiForTranslation(AiModelConfig config, String text, String sourceLanguage, String targetLanguage) {
+        ChatClient client = aiClientFactory.getChatClient(config);
 
-        String prompt = String.format("请将以下文本翻译成%s：\n\n%s", getLanguageName(targetLanguage), text);
+        String langName = getLanguageName(targetLanguage);
+        String prompt;
 
-        // 模拟翻译响应
-        return generateLocalTranslation(text, targetLanguage);
+        if ("auto".equals(sourceLanguage)) {
+            prompt = String.format("请将以下文本翻译成%s：\n\n%s", langName, text);
+        } else {
+            String sourceLangName = getLanguageName(sourceLanguage);
+            prompt = String.format("请将以下%s文本翻译成%s：\n\n%s", sourceLangName, langName, text);
+        }
+
+        String response = client.prompt(prompt)
+                .call()
+                .content();
+
+        log.info("AI translation completed, model: {}, targetLang: {}", config.getModelName(), targetLanguage);
+        return response;
     }
 
-    /**
-     * 调用AI获取回复建议（真实实现）
-     */
-    private List<String> callAiForSuggestions(List<Message> messages) {
-        // TODO: 接入真实的AI API
-        return getDefaultSuggestions();
+    private List<String> callAiForSuggestions(AiModelConfig config, List<Message> messages) {
+        ChatClient client = aiClientFactory.getChatClient(config);
+
+        String chatHistory = buildChatHistory(messages);
+        String prompt = "请根据以下聊天记录，提供3-5个合适的回复建议。要求：\n" +
+                "1. 回复要自然、得体\n" +
+                "2. 符合上下文语境\n" +
+                "3. 每个建议单独一行，不要编号\n" +
+                "\n" +
+                "聊天记录：\n" +
+                chatHistory;
+
+        String response = client.prompt(prompt)
+                .call()
+                .content();
+
+        if (response == null || response.isEmpty()) {
+            return getDefaultSuggestions();
+        }
+
+        return response.lines()
+                .map(String::trim)
+                .filter(line -> !line.isEmpty())
+                .limit(5)
+                .collect(Collectors.toList());
     }
 
-    /**
-     * 本地生成摘要（模拟）
-     */
     private String generateLocalSummary(List<Message> messages, String summaryType) {
         if (messages == null || messages.isEmpty()) {
             return "暂无聊天记录";
@@ -233,7 +261,7 @@ public class AiServiceImpl implements AiService {
                 summary.append("\n3. 内容类型：文本").append(textCount).append("条，图片").append(imageCount).append("条");
                 break;
 
-            default: // brief
+            default:
                 summary.append("会话共 ").append(messageCount).append(" 条消息，");
                 summary.append("主要内容涉及：").append(extractKeywords(messages));
                 break;
@@ -242,16 +270,9 @@ public class AiServiceImpl implements AiService {
         return summary.toString();
     }
 
-    /**
-     * 本地翻译（模拟）
-     */
     private String generateLocalTranslation(String text, String targetLanguage) {
-        // 这是一个简化的模拟翻译
-        // 实际应用中应该调用翻译API
-
         String langName = getLanguageName(targetLanguage);
 
-        // 简单的模拟翻译逻辑
         if ("en".equals(targetLanguage)) {
             return "[Translated to English] " + text;
         } else if ("zh".equals(targetLanguage)) {
@@ -265,11 +286,7 @@ public class AiServiceImpl implements AiService {
         return "[Translated to " + langName + "] " + text;
     }
 
-    /**
-     * 提取关键词
-     */
     private String extractKeywords(List<Message> messages) {
-        // 简单的关键词提取
         List<String> keywords = new ArrayList<>();
 
         long textMessageCount = messages.stream()
@@ -297,35 +314,36 @@ public class AiServiceImpl implements AiService {
         return String.join("、", keywords);
     }
 
-    /**
-     * 获取语言名称
-     */
     private String getLanguageName(String languageCode) {
-        return switch (languageCode) {
-            case "zh" -> "中文";
-            case "en" -> "英语";
-            case "ja" -> "日语";
-            case "ko" -> "韩语";
-            case "fr" -> "法语";
-            case "de" -> "德语";
-            case "es" -> "西班牙语";
-            case "ru" -> "俄语";
-            default -> languageCode;
-        };
+        if ("zh".equals(languageCode)) {
+            return "中文";
+        } else if ("en".equals(languageCode)) {
+            return "英语";
+        } else if ("ja".equals(languageCode)) {
+            return "日语";
+        } else if ("ko".equals(languageCode)) {
+            return "韩语";
+        } else if ("fr".equals(languageCode)) {
+            return "法语";
+        } else if ("de".equals(languageCode)) {
+            return "德语";
+        } else if ("es".equals(languageCode)) {
+            return "西班牙语";
+        } else if ("ru".equals(languageCode)) {
+            return "俄语";
+        } else if ("ar".equals(languageCode)) {
+            return "阿拉伯语";
+        } else if ("pt".equals(languageCode)) {
+            return "葡萄牙语";
+        }
+        return languageCode;
     }
 
-    /**
-     * 估算token数量
-     */
     private Integer estimateTokens(String text) {
         if (text == null) return 0;
-        // 简单估算：中文约1.5字符/token，英文约4字符/token
         return (int) (text.length() / 2.0);
     }
 
-    /**
-     * 获取默认回复建议
-     */
     private List<String> getDefaultSuggestions() {
         List<String> suggestions = new ArrayList<>();
         suggestions.add("好的");

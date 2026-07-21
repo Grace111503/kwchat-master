@@ -64,4 +64,29 @@ public interface ConversationService {
      * 设置置顶
      */
     void setTop(Long conversationId, Long userId, Integer isTop);
+
+    /**
+     * 更新群公告
+     */
+    void updateAnnouncement(Long conversationId, String announcement);
+
+    /**
+     * 更新群名称
+     */
+    void updateGroupName(Long conversationId, String name);
+
+    /**
+     * 更新群头像
+     */
+    void updateGroupAvatar(Long conversationId, String avatar);
+
+    /**
+     * 解散群聊
+     */
+    void dissolveGroup(Long conversationId, Long userId);
+
+    /**
+     * 更新成员角色
+     */
+    void updateMemberRole(Long conversationId, Long userId, Integer role);
 }

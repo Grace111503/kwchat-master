@@ -102,13 +102,17 @@ public class FileServiceImpl implements FileService {
     public FileUploadResponse uploadVideo(MultipartFile file) {
         // 验证视频类型
         if (!isAllowedFileType(file.getContentType(), "video")) {
-            throw new BusinessException(ResultCode.FILE_TYPE_NOT_SUPPORTED, "不支持的视频格式");
+            throw new BusinessException(ResultCode.FILE_TYPE_NOT_SUPPORTED, "不支持的视频格式，请使用 MP4 格式");
         }
 
         // 验证视频大小
         if (!isFileSizeValid(file.getSize(), "video")) {
             throw new BusinessException(ResultCode.FILE_SIZE_EXCEEDED, "视频大小不能超过50MB");
         }
+
+        // 记录视频信息用于调试
+        String fileName = file.getOriginalFilename();
+        log.info("上传视频: fileName={}, contentType={}, size={}", fileName, file.getContentType(), file.getSize());
 
         return uploadFile(file, CommonConstant.FILE_PATH_VIDEO);
     }

@@ -4,7 +4,7 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.io.Serializable;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 /**
  * 更新用户信息请求DTO
@@ -38,7 +38,7 @@ public class UpdateUserRequest implements Serializable {
     /**
      * 生日
      */
-    private LocalDateTime birthday;
+    private LocalDate birthday;
 
     /**
      * 个性签名

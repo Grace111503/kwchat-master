@@ -18,6 +18,8 @@ import com.kwp.chat.service.MessageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
+
+import java.util.Objects;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -58,8 +60,9 @@ public class FriendServiceImpl implements FriendService {
             throw new BusinessException(ResultCode.FRIEND_ALREADY_EXISTS);
         }
 
-        // 检查是否已发送过申请
-        if (friendRequestMapper.countPendingBySenderIdAndReceiverId(senderId, receiverId) > 0) {
+        // 检查是否已发送过申请（任何状态）
+        FriendRequest existingRequest = friendRequestMapper.selectBySenderIdAndReceiverId(senderId, receiverId);
+        if (existingRequest != null) {
             throw new BusinessException(ResultCode.FRIEND_REQUEST_ALREADY_SENT);
         }
 
@@ -177,12 +180,23 @@ public class FriendServiceImpl implements FriendService {
      * 添加好友关系
      */
     private void addFriend(Long userId, Long friendId) {
-        Friend friend = new Friend();
-        friend.setUserId(userId);
-        friend.setFriendId(friendId);
-        friend.setIsStar(0);
-        friend.setIsBlack(0);
-        friendMapper.insert(friend);
+        // 检查是否已存在好友关系
+        Friend existingFriend = friendMapper.selectByUserIdAndFriendId(userId, friendId);
+        if (existingFriend != null) {
+            return; // 已存在，跳过
+        }
+
+        try {
+            Friend friend = new Friend();
+            friend.setUserId(userId);
+            friend.setFriendId(friendId);
+            friend.setIsStar(0);
+            friend.setIsBlack(0);
+            friendMapper.insert(friend);
+        } catch (Exception e) {
+            // 忽略重复键异常（并发情况下可能重复插入）
+            log.warn("添加好友时忽略重复键异常: userId={}, friendId={}", userId, friendId);
+        }
     }
 
     /**
@@ -209,5 +223,67 @@ public class FriendServiceImpl implements FriendService {
         } catch (Exception e) {
             log.error("发送欢迎消息失败: senderId={}, acceptorId={}, error={}", senderId, acceptorId, e.getMessage(), e);
         }
+    }
+
+    @Override
+    public void blackFriend(Long userId, Long friendId) {
+        Friend friend = friendMapper.selectByUserIdAndFriendId(userId, friendId);
+        if (friend == null) {
+            throw new BusinessException(ResultCode.FRIEND_NOT_FOUND);
+        }
+        friend.setIsBlack(1);
+        friendMapper.updateById(friend);
+        log.info("好友已拉黑: userId={}, friendId={}", userId, friendId);
+    }
+
+    @Override
+    public void unblackFriend(Long userId, Long friendId) {
+        Friend friend = friendMapper.selectByUserIdAndFriendId(userId, friendId);
+        if (friend == null) {
+            throw new BusinessException(ResultCode.FRIEND_NOT_FOUND);
+        }
+        friend.setIsBlack(0);
+        friendMapper.updateById(friend);
+        log.info("已取消拉黑: userId={}, friendId={}", userId, friendId);
+    }
+
+    @Override
+    public List<User> getBlacklist(Long userId) {
+        List<Friend> friends = friendMapper.selectByUserId(userId);
+        List<Long> blackFriendIds = friends.stream()
+                .filter(f -> Integer.valueOf(1).equals(f.getIsBlack()))
+                .map(Friend::getFriendId)
+                .toList();
+
+        if (blackFriendIds.isEmpty()) {
+            return List.of();
+        }
+
+        return blackFriendIds.stream()
+                .map(userMapper::selectById)
+                .filter(Objects::nonNull)
+                .toList();
+    }
+
+    @Override
+    public void updateFriendGroup(Long userId, Long friendId, String groupName) {
+        Friend friend = friendMapper.selectByUserIdAndFriendId(userId, friendId);
+        if (friend == null) {
+            throw new BusinessException(ResultCode.FRIEND_NOT_FOUND);
+        }
+        friend.setGroupName(groupName);
+        friendMapper.updateById(friend);
+    }
+
+    @Override
+    public List<String> getFriendGroups(Long userId) {
+        List<Friend> friends = friendMapper.selectByUserId(userId);
+        return friends.stream()
+                .map(Friend::getGroupName)
+                .filter(Objects::nonNull)
+                .filter(g -> !g.isEmpty())
+                .distinct()
+                .sorted()
+                .toList();
     }
 }

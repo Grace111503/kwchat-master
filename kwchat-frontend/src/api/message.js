@@ -68,6 +68,46 @@ export function markConversationMessagesAsRead(conversationId) {
 }
 
 /**
+ * 收藏消息
+ */
+export function favoriteMessage(messageId) {
+  return request({
+    url: `/message/favorite/${String(messageId)}`,
+    method: 'post'
+  })
+}
+
+/**
+ * 取消收藏
+ */
+export function unfavoriteMessage(messageId) {
+  return request({
+    url: `/message/favorite/${String(messageId)}`,
+    method: 'delete'
+  })
+}
+
+/**
+ * 检查是否已收藏
+ */
+export function isFavorited(messageId) {
+  return request({
+    url: `/message/favorite/${String(messageId)}/check`,
+    method: 'get'
+  })
+}
+
+/**
+ * 删除消息
+ */
+export function deleteMessage(messageId) {
+  return request({
+    url: `/message/${String(messageId)}`,
+    method: 'delete'
+  })
+}
+
+/**
  * 获取未读消息数
  */
 export function getUnreadMessageCount(conversationId) {

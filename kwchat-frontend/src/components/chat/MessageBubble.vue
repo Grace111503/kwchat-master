@@ -1,10 +1,25 @@
 <template>
   <div class="message-bubble-wrapper" :class="{ 'is-self': isSelf }">
-    <el-avatar :size="34" :src="message.senderAvatar" shape="square" class="message-avatar">
+    <el-avatar
+      :size="34"
+      :src="message.senderAvatar"
+      shape="square"
+      class="message-avatar"
+      :class="{ 'clickable': !isSelf }"
+      @click="handleAvatarClick"
+    >
       {{ getAvatarFallback(message.senderName) }}
     </el-avatar>
 
     <div class="message-content">
+      <!-- 引用消息预览 -->
+      <div class="reply-preview" v-if="message.replyMessageId">
+        <div class="reply-content">
+          <span class="reply-name">{{ message.replySenderName || '未知用户' }}：</span>
+          <span class="reply-text">{{ getReplyPreviewText() }}</span>
+        </div>
+      </div>
+
       <div class="message-sender" v-if="!isSelf">{{ message.senderName }}</div>
 
       <div class="message-bubble" :class="bubbleClass">
@@ -45,18 +60,27 @@
         <!-- 视频消息 -->
         <template v-else-if="message.messageType === 4">
           <div class="message-video-wrapper">
-            <video :src="message.fileUrl" class="message-video" preload="metadata" @click="playVideo" />
-            <div class="video-play-btn" @click="playVideo">
-              <el-icon :size="36"><VideoPlay /></el-icon>
-            </div>
+            <video
+              :src="message.fileUrl"
+              class="message-video"
+              controls
+              preload="metadata"
+              playsinline
+            />
           </div>
         </template>
 
         <!-- 语音消息 -->
         <template v-else-if="message.messageType === 5">
           <div class="message-voice" @click="playVoice">
-            <el-icon :size="18"><Microphone /></el-icon>
+            <el-icon :size="18" :class="{ 'playing': isPlaying }">
+              <VideoPlay v-if="!isPlaying" />
+              <VideoPause v-else />
+            </el-icon>
             <span class="voice-duration">{{ message.duration || 0 }}s</span>
+            <div class="voice-wave" v-if="isPlaying">
+              <span></span><span></span><span></span>
+            </div>
           </div>
         </template>
 
@@ -82,6 +106,17 @@
         </span>
       </div>
     </div>
+
+    <!-- 消息操作菜单 -->
+    <MessageActions
+      v-if="message.messageType !== 6"
+      :message="message"
+      :is-self="isSelf"
+      @recall="handleRecall"
+      @forward="handleForward"
+      @reply="handleReply"
+      @delete="handleDeleteMessage"
+    />
   </div>
 </template>
 
@@ -90,6 +125,7 @@ import { ref, computed } from 'vue'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import 'dayjs/locale/zh-cn'
+import MessageActions from './MessageActions.vue'
 
 dayjs.extend(relativeTime)
 dayjs.locale('zh-cn')
@@ -99,7 +135,7 @@ const props = defineProps({
   isSelf: { type: Boolean, default: false }
 })
 
-const emit = defineEmits(['play-voice', 'download', 'play-video'])
+const emit = defineEmits(['play-voice', 'download', 'play-video', 'click-avatar', 'recall', 'forward', 'reply', 'delete'])
 const isPlaying = ref(false)
 
 // 获取头像 fallback 文字（显示最后两个字）
@@ -123,6 +159,8 @@ const bubbleClass = computed(() => {
 
 const formatText = (text) => {
   if (!text) return ''
+  // 渲染自定义表情 [emoji:name]
+  text = text.replace(/\[emoji:([^\]]+)\]/g, '<img src="/emoji/$1.png" class="custom-emoji" alt="$1" onerror="this.style.display=\'none\'" />')
   text = text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank">$1</a>')
   text = text.replace(/\n/g, '<br>')
   return text
@@ -150,9 +188,65 @@ const formatFileSize = (size) => {
   return `${fileSize.toFixed(1)} ${units[index]}`
 }
 
-const playVoice = () => { isPlaying.value = true; emit('play-voice', props.message); setTimeout(() => { isPlaying.value = false }, (props.message.duration || 1) * 1000) }
+let audio = null
+const playVoice = () => {
+  if (!props.message.fileUrl) {
+    ElMessage.error('语音文件不存在')
+    return
+  }
+
+  if (isPlaying.value && audio) {
+    audio.pause()
+    isPlaying.value = false
+    return
+  }
+
+  audio = new Audio(props.message.fileUrl)
+  audio.onended = () => {
+    isPlaying.value = false
+  }
+  audio.onerror = () => {
+    isPlaying.value = false
+    ElMessage.error('语音播放失败')
+  }
+  audio.play()
+  isPlaying.value = true
+}
 const downloadFile = () => emit('download', props.message)
 const playVideo = () => emit('play-video', props.message)
+
+const handleAvatarClick = () => {
+  if (!props.isSelf) {
+    emit('click-avatar', {
+      senderId: props.message.senderId,
+      senderName: props.message.senderName,
+      senderAvatar: props.message.senderAvatar
+    })
+  }
+}
+
+const handleRecall = (message) => {
+  emit('recall', message)
+}
+
+const handleForward = (data) => {
+  emit('forward', data)
+}
+
+const handleReply = (message) => {
+  emit('reply', message)
+}
+
+const handleDeleteMessage = (message) => {
+  emit('delete', message)
+}
+
+const getReplyPreviewText = () => {
+  if (props.message.replyContent) {
+    return props.message.replyContent.substring(0, 40) + (props.message.replyContent.length > 40 ? '...' : '')
+  }
+  return '[消息]'
+}
 </script>
 
 <style lang="scss" scoped>
@@ -187,6 +281,14 @@ const playVideo = () => emit('play-video', props.message)
 
 .message-avatar {
   flex-shrink: 0;
+
+  &.clickable {
+    cursor: pointer;
+
+    &:hover {
+      opacity: 0.8;
+    }
+  }
 }
 
 .message-content {
@@ -194,6 +296,26 @@ const playVideo = () => emit('play-video', props.message)
   flex-direction: column;
   margin-left: 10px;
   max-width: 60%;
+}
+
+.reply-preview {
+  background: #f5f7fa;
+  border-left: 3px solid #2b7fff;
+  padding: 6px 10px;
+  margin-bottom: 6px;
+  border-radius: 0 4px 4px 0;
+
+  .reply-content {
+    font-size: 12px;
+    color: #999;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .reply-name {
+    color: #2b7fff;
+  }
 }
 
 .message-sender {
@@ -251,6 +373,13 @@ const playVideo = () => emit('play-video', props.message)
     &:hover {
       text-decoration: underline;
     }
+  }
+
+  :deep(.custom-emoji) {
+    width: 20px;
+    height: 20px;
+    vertical-align: middle;
+    margin: 0 2px;
   }
 }
 
@@ -312,25 +441,7 @@ const playVideo = () => emit('play-video', props.message)
   max-width: 280px;
   max-height: 200px;
   display: block;
-}
-
-.video-play-btn {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 48px;
-  height: 48px;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  transition: background 0.15s;
-
-  &:hover {
-    background: rgba(0, 0, 0, 0.7);
-  }
+  border-radius: 4px;
 }
 
 .message-voice {
@@ -339,11 +450,47 @@ const playVideo = () => emit('play-video', props.message)
   gap: 6px;
   cursor: pointer;
   padding: 2px 4px;
+  min-width: 100px;
+
+  .el-icon.playing {
+    color: #2b7fff;
+  }
 }
 
 .voice-duration {
   font-size: 13px;
   color: #333;
+}
+
+.voice-wave {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 16px;
+
+  span {
+    width: 3px;
+    height: 100%;
+    background: #2b7fff;
+    animation: wave 0.5s ease-in-out infinite;
+
+    &:nth-child(2) {
+      animation-delay: 0.1s;
+    }
+
+    &:nth-child(3) {
+      animation-delay: 0.2s;
+    }
+  }
+}
+
+@keyframes wave {
+  0%, 100% {
+    height: 4px;
+  }
+  50% {
+    height: 14px;
+  }
 }
 
 .message-system {

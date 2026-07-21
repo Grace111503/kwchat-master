@@ -26,6 +26,11 @@
           <Folder />
         </el-icon>
       </el-tooltip>
+      <el-tooltip content="视频" placement="top">
+        <el-icon class="toolbar-btn" @click="triggerVideoUpload">
+          <VideoCamera />
+        </el-icon>
+      </el-tooltip>
       <el-tooltip content="@提醒" placement="top" v-if="isGroup">
         <el-icon class="toolbar-btn" @click="showMentionList = !showMentionList">
           <Bell />
@@ -51,6 +56,7 @@
       @keydown.enter.ctrl.except="handleNewLine"
       @input="handleInput"
       @focus="handleFocus"
+      @paste="handlePaste"
     />
 
     <!-- 底部 -->
@@ -64,6 +70,7 @@
     <!-- 隐藏的文件输入 -->
     <input ref="imageInputRef" type="file" accept="image/*" style="display: none" @change="handleImageSelect" />
     <input ref="fileInputRef" type="file" style="display: none" @change="handleFileSelect" />
+    <input ref="videoInputRef" type="file" accept="video/*" style="display: none" @change="handleVideoSelect" />
   </div>
 </template>
 
@@ -80,11 +87,12 @@ const props = defineProps({
   replyMessage: { type: Object, default: null }
 })
 
-const emit = defineEmits(['send', 'send-image', 'send-file', 'typing', 'cancel-reply'])
+const emit = defineEmits(['send', 'send-image', 'send-file', 'send-video', 'typing', 'cancel-reply'])
 
 const inputRef = ref(null)
 const imageInputRef = ref(null)
 const fileInputRef = ref(null)
+const videoInputRef = ref(null)
 const messageContent = ref('')
 const showEmojiPanel = ref(false)
 const showMentionList = ref(false)
@@ -116,8 +124,11 @@ const handleFocus = () => {
 const insertEmoji = (emoji) => { messageContent.value += emoji; inputRef.value?.focus() }
 const insertCustomEmoji = (emoji) => { messageContent.value += `[emoji:${emoji.name}]`; showEmojiPanel.value = false; inputRef.value?.focus() }
 const insertMention = (member) => {
-  if (member.id === 'all') { messageContent.value += '@所有人 ' }
-  else { messageContent.value += `@${member.nickname} ` }
+  if (member.id === 'all' || member.userId === 'all') {
+    messageContent.value += '@所有人 '
+  } else {
+    messageContent.value += `@${member.nickname || member.username} `
+  }
   showMentionList.value = false
   inputRef.value?.focus()
 }
@@ -138,6 +149,7 @@ const getReplyPreview = (message) => {
 
 const triggerImageUpload = () => { imageInputRef.value?.click() }
 const triggerFileUpload = () => { fileInputRef.value?.click() }
+const triggerVideoUpload = () => { videoInputRef.value?.click() }
 
 const handleImageSelect = (event) => {
   const file = event.target.files[0]
@@ -154,6 +166,42 @@ const handleFileSelect = (event) => {
   if (file.size > 100 * 1024 * 1024) { ElMessage.error('文件大小不能超过100MB'); return }
   emit('send-file', file)
   event.target.value = ''
+}
+
+const handleVideoSelect = (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+  if (!file.type.startsWith('video/')) { ElMessage.error('请选择视频文件'); return }
+  if (file.size > 50 * 1024 * 1024) { ElMessage.error('视频大小不能超过50MB'); return }
+
+  // 检查视频格式，HEVC/H.265 浏览器不支持
+  const supportedTypes = ['video/mp4', 'video/webm', 'video/ogg']
+  if (!supportedTypes.includes(file.type)) {
+    ElMessage.warning('建议使用 MP4 格式（H.264编码），其他格式可能无法播放')
+  }
+
+  emit('send-video', file)
+  event.target.value = ''
+}
+
+const handlePaste = (event) => {
+  const items = event.clipboardData?.items
+  if (!items) return
+
+  for (const item of items) {
+    if (item.type.startsWith('image/')) {
+      event.preventDefault()
+      const file = item.getAsFile()
+      if (file) {
+        if (file.size > 10 * 1024 * 1024) {
+          ElMessage.error('图片大小不能超过10MB')
+          return
+        }
+        emit('send-image', file)
+      }
+      break
+    }
+  }
 }
 
 watch(messageContent, (newVal) => {
