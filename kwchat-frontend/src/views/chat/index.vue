@@ -128,6 +128,7 @@
           @send-image="handleSendImage"
           @send-file="handleSendFile"
           @send-video="handleSendVideo"
+          @send-voice="handleSendVoice"
           @typing="handleTyping"
           @cancel-reply="cancelReply"
         />
@@ -323,6 +324,25 @@ const handleSendVideo = async (file) => {
     }
   } catch (error) {
     ElMessage.error('视频上传失败')
+  }
+}
+
+const handleSendVoice = async (file) => {
+  if (!chatStore.currentConversation) return
+  try {
+    const res = await uploadFile(file)
+    if (res.code === 200) {
+      await chatStore.sendMessage(chatStore.currentConversation.id, 5, null, {
+        fileUrl: res.data.url,
+        fileName: res.data.originalFileName,
+        fileSize: res.data.fileSize,
+        fileType: res.data.fileType,
+        duration: 3 // 默认3秒，实际应从录音获取
+      })
+      scrollToBottom()
+    }
+  } catch (error) {
+    ElMessage.error('语音发送失败')
   }
 }
 

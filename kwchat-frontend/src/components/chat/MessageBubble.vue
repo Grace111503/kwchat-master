@@ -72,15 +72,22 @@
 
         <!-- 语音消息 -->
         <template v-else-if="message.messageType === 5">
-          <div class="message-voice" @click="playVoice">
-            <el-icon :size="18" :class="{ 'playing': isPlaying }">
-              <VideoPlay v-if="!isPlaying" />
-              <VideoPause v-else />
-            </el-icon>
-            <span class="voice-duration">{{ message.duration || 0 }}s</span>
-            <div class="voice-wave" v-if="isPlaying">
-              <span></span><span></span><span></span>
+          <div class="message-voice">
+            <div class="voice-play-btn" @click="playVoice">
+              <el-icon :size="18" :class="{ 'playing': isPlaying }">
+                <VideoPlay v-if="!isPlaying" />
+                <VideoPause v-else />
+              </el-icon>
+              <span class="voice-duration">{{ message.duration || 0 }}s</span>
+              <div class="voice-wave" v-if="isPlaying">
+                <span></span><span></span><span></span>
+              </div>
             </div>
+            <el-tooltip content="下载语音" placement="top">
+              <el-icon class="voice-download" @click.stop="downloadVoice">
+                <Download />
+              </el-icon>
+            </el-tooltip>
           </div>
         </template>
 
@@ -191,7 +198,7 @@ const formatFileSize = (size) => {
 }
 
 let audio = null
-const playVoice = () => {
+const playVoice = async () => {
   if (!props.message.fileUrl) {
     ElMessage.error('语音文件不存在')
     return
@@ -203,16 +210,35 @@ const playVoice = () => {
     return
   }
 
-  audio = new Audio(props.message.fileUrl)
-  audio.onended = () => {
+  try {
+    // 获取音频文件
+    const response = await fetch(props.message.fileUrl)
+    if (!response.ok) throw new Error('文件获取失败')
+
+    const blob = await response.blob()
+    const blobUrl = URL.createObjectURL(blob)
+
+    audio = new Audio(blobUrl)
+
+    audio.onended = () => {
+      isPlaying.value = false
+      URL.revokeObjectURL(blobUrl)
+    }
+
+    audio.onerror = () => {
+      isPlaying.value = false
+      URL.revokeObjectURL(blobUrl)
+      // 播放失败，提示下载
+      ElMessage.warning('语音格式不支持播放，请点击下载')
+    }
+
+    await audio.play()
+    isPlaying.value = true
+  } catch (e) {
     isPlaying.value = false
+    console.error('语音播放失败:', e)
+    ElMessage.warning('语音播放失败，请点击下载')
   }
-  audio.onerror = () => {
-    isPlaying.value = false
-    ElMessage.error('语音播放失败')
-  }
-  audio.play()
-  isPlaying.value = true
 }
 const downloadFile = () => emit('download', props.message)
 const playVideo = () => emit('play-video', props.message)
@@ -245,6 +271,12 @@ const handleDeleteMessage = (message) => {
 
 const handleTranslateMessage = (message) => {
   emit('translate', message)
+}
+
+// 下载语音
+const downloadVoice = () => {
+  if (!props.message.fileUrl) return
+  window.open(props.message.fileUrl, '_blank')
 }
 
 const getReplyPreviewText = () => {
@@ -467,13 +499,29 @@ const getReplyPreviewText = () => {
 .message-voice {
   display: flex;
   align-items: center;
-  gap: 6px;
-  cursor: pointer;
+  gap: 8px;
   padding: 2px 4px;
   min-width: 100px;
 
-  .el-icon.playing {
-    color: #2b7fff;
+  .voice-play-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+
+    .el-icon.playing {
+      color: #2b7fff;
+    }
+  }
+
+  .voice-download {
+    cursor: pointer;
+    color: #999;
+    font-size: 14px;
+
+    &:hover {
+      color: #2b7fff;
+    }
   }
 }
 

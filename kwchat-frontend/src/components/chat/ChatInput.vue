@@ -21,6 +21,11 @@
           <Picture />
         </el-icon>
       </el-tooltip>
+      <el-tooltip :content="isMobile() ? '拍照' : '选择图片'" placement="top">
+        <el-icon class="toolbar-btn" @click="takePhoto">
+          <Camera />
+        </el-icon>
+      </el-tooltip>
       <el-tooltip content="文件" placement="top">
         <el-icon class="toolbar-btn" @click="triggerFileUpload">
           <Folder />
@@ -31,11 +36,34 @@
           <VideoCamera />
         </el-icon>
       </el-tooltip>
+      <el-tooltip :content="isMobile() ? '录制视频' : '选择视频'" placement="top">
+        <el-icon class="toolbar-btn" @click="recordVideo">
+          <VideoPlay />
+        </el-icon>
+      </el-tooltip>
+      <el-tooltip content="语音" placement="top">
+        <el-icon
+          class="toolbar-btn"
+          :class="{ 'recording': isRecording }"
+          @mousedown="startVoiceRecord"
+          @mouseup="stopVoiceRecord"
+          @mouseleave="cancelVoiceRecord"
+        >
+          <Microphone />
+        </el-icon>
+      </el-tooltip>
       <el-tooltip content="@提醒" placement="top" v-if="isGroup">
         <el-icon class="toolbar-btn" @click="showMentionList = !showMentionList">
           <Bell />
         </el-icon>
       </el-tooltip>
+    </div>
+
+    <!-- 录音提示 -->
+    <div class="recording-tip" v-if="isRecording">
+      <span class="recording-dot"></span>
+      <span>正在录音... {{ recordingTime }}s</span>
+      <span class="tip">松开发送</span>
     </div>
 
     <!-- 表情面板 -->
@@ -87,7 +115,7 @@ const props = defineProps({
   replyMessage: { type: Object, default: null }
 })
 
-const emit = defineEmits(['send', 'send-image', 'send-file', 'send-video', 'typing', 'cancel-reply'])
+const emit = defineEmits(['send', 'send-image', 'send-file', 'send-video', 'send-voice', 'typing', 'cancel-reply'])
 
 const inputRef = ref(null)
 const imageInputRef = ref(null)
@@ -96,6 +124,13 @@ const videoInputRef = ref(null)
 const messageContent = ref('')
 const showEmojiPanel = ref(false)
 const showMentionList = ref(false)
+
+// 录音相关
+const isRecording = ref(false)
+const recordingTime = ref(0)
+let mediaRecorder = null
+let audioChunks = []
+let recordingTimer = null
 
 const canSend = computed(() => messageContent.value.trim().length > 0 && !props.disabled)
 
@@ -150,6 +185,140 @@ const getReplyPreview = (message) => {
 const triggerImageUpload = () => { imageInputRef.value?.click() }
 const triggerFileUpload = () => { fileInputRef.value?.click() }
 const triggerVideoUpload = () => { videoInputRef.value?.click() }
+
+// 检测是否是移动设备
+const isMobile = () => {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+}
+
+// 拍照
+const takePhoto = () => {
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.accept = 'image/*'
+  if (isMobile()) {
+    input.capture = 'environment' // 手机使用后置摄像头
+  }
+  input.onchange = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) {
+        ElMessage.error('图片大小不能超过10MB')
+        return
+      }
+      emit('send-image', file)
+    }
+  }
+  input.click()
+}
+
+// 录制视频
+const recordVideo = () => {
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.accept = 'video/*'
+  if (isMobile()) {
+    input.capture = 'environment'
+  }
+  input.onchange = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      if (file.size > 50 * 1024 * 1024) {
+        ElMessage.error('视频大小不能超过50MB')
+        return
+      }
+      emit('send-video', file)
+    }
+  }
+  input.click()
+}
+
+// 开始录音
+const startVoiceRecord = async () => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+
+    // 按优先级尝试支持的音频格式
+    const supportedTypes = [
+      'audio/mp4',
+      'audio/webm;codecs=opus',
+      'audio/webm',
+      'audio/ogg;codecs=opus',
+      'audio/wav'
+    ]
+
+    let mimeType = ''
+    for (const type of supportedTypes) {
+      if (MediaRecorder.isTypeSupported(type)) {
+        mimeType = type
+        break
+      }
+    }
+
+    mediaRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream)
+    audioChunks = []
+
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) {
+        audioChunks.push(e.data)
+      }
+    }
+
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/mp4' })
+      // 根据格式确定扩展名
+      let ext = 'm4a'
+      if (mediaRecorder.mimeType?.includes('webm')) ext = 'webm'
+      else if (mediaRecorder.mimeType?.includes('ogg')) ext = 'ogg'
+      else if (mediaRecorder.mimeType?.includes('wav')) ext = 'wav'
+
+      const file = new File([blob], `voice_${Date.now()}.${ext}`, { type: mediaRecorder.mimeType || 'audio/mp4' })
+      emit('send-voice', file)
+      stream.getTracks().forEach(track => track.stop())
+    }
+
+    mediaRecorder.start()
+    isRecording.value = true
+    recordingTime.value = 0
+
+    // 计时
+    recordingTimer = setInterval(() => {
+      recordingTime.value++
+      if (recordingTime.value >= 60) {
+        stopVoiceRecord()
+      }
+    }, 1000)
+  } catch (error) {
+    ElMessage.error('无法访问麦克风，请检查权限')
+  }
+}
+
+// 停止录音
+const stopVoiceRecord = () => {
+  if (mediaRecorder && mediaRecorder.state === 'recording') {
+    mediaRecorder.stop()
+  }
+  isRecording.value = false
+  if (recordingTimer) {
+    clearInterval(recordingTimer)
+    recordingTimer = null
+  }
+}
+
+// 取消录音
+const cancelVoiceRecord = () => {
+  if (isRecording.value) {
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+      mediaRecorder.stop()
+      audioChunks = [] // 清空数据，不发送
+    }
+    isRecording.value = false
+    if (recordingTimer) {
+      clearInterval(recordingTimer)
+      recordingTimer = null
+    }
+  }
+}
 
 const handleImageSelect = (event) => {
   const file = event.target.files[0]
@@ -279,6 +448,16 @@ defineExpose({
   &:hover {
     color: #2b7fff;
   }
+
+  &.recording {
+    color: #f56c6c;
+    animation: pulse 1s infinite;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
 }
 
 .input-footer {
@@ -286,6 +465,36 @@ defineExpose({
   justify-content: space-between;
   align-items: center;
   padding: 6px 16px;
+}
+
+.recording-tip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #fff3f3;
+  border-top: 1px solid #fde2e2;
+  font-size: 13px;
+  color: #f56c6c;
+
+  .recording-dot {
+    width: 8px;
+    height: 8px;
+    background: #f56c6c;
+    border-radius: 50%;
+    animation: blink 1s infinite;
+  }
+
+  .tip {
+    margin-left: auto;
+    font-size: 12px;
+    color: #999;
+  }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
 }
 
 .input-tip {
