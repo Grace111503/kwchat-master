@@ -108,6 +108,16 @@ export function deleteMessage(messageId) {
 }
 
 /**
+ * 获取收藏列表
+ */
+export function getFavoritedMessages() {
+  return request({
+    url: '/message/favorite/list',
+    method: 'get'
+  })
+}
+
+/**
  * 获取未读消息数
  */
 export function getUnreadMessageCount(conversationId) {

@@ -1,12 +1,15 @@
 package com.kwp.chat.api.controller;
 
 import com.kwp.chat.common.result.Result;
+import com.kwp.chat.model.message.Message;
 import com.kwp.chat.service.MessageFavoriteService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * 消息收藏控制器
@@ -44,6 +47,14 @@ public class MessageFavoriteController {
         Long userId = getCurrentUserId(request);
         boolean isFavorited = messageFavoriteService.isFavorited(messageId, userId);
         return Result.success(isFavorited);
+    }
+
+    @Operation(summary = "获取收藏列表")
+    @GetMapping("/list")
+    public Result<List<Message>> getFavoritedMessages(HttpServletRequest request) {
+        Long userId = getCurrentUserId(request);
+        List<Message> messages = messageFavoriteService.getFavoritedMessages(userId);
+        return Result.success(messages);
     }
 
     /**
