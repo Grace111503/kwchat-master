@@ -126,7 +126,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['reply', 'forward', 'recall', 'delete', 'copy', 'favorite'])
+const emit = defineEmits(['reply', 'forward', 'recall', 'delete', 'copy', 'favorite', 'multi-select'])
 
 const chatStore = useChatStore()
 const showMenu = ref(false)

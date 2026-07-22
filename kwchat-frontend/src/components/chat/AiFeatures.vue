@@ -132,6 +132,10 @@ const props = defineProps({
   messageId: {
     type: Number,
     default: null
+  },
+  recentMessages: {
+    type: Array,
+    default: () => []
   }
 })
 
@@ -152,6 +156,8 @@ const showTranslate = ref(false)
 const targetLanguage = ref('en')
 const translateLoading = ref(false)
 const translateResult = ref(null)
+const translateInputText = ref('')
+const selectedMessageForTranslate = ref(null)
 
 // 智能回复
 const suggestions = ref([])
@@ -187,13 +193,42 @@ const handleGenerateSummary = async () => {
 
 // 打开翻译对话框
 const openTranslate = () => {
-  if (!props.messageId) {
-    ElMessage.warning('请先选择要翻译的消息')
-    return
-  }
   showTranslate.value = true
   translateResult.value = null
+  translateInputText.value = ''
+  selectedMessageForTranslate.value = null
   showQuickActions.value = false
+}
+
+// 选择消息进行翻译
+const selectMessageForTranslate = (message) => {
+  selectedMessageForTranslate.value = message
+}
+
+// 直接翻译消息（从三点菜单触发）
+const translateDirectly = async (message) => {
+  if (!message || !message.content) {
+    ElMessage.warning('无法翻译该消息')
+    return
+  }
+
+  selectedMessageForTranslate.value = message
+  showTranslate.value = true
+  targetLanguage.value = 'en'
+  translateResult.value = null
+  showQuickActions.value = false
+
+  translateLoading.value = true
+  try {
+    const res = await translateMessage(message.id, targetLanguage.value)
+    if (res.code === 200) {
+      translateResult.value = res.data
+    }
+  } catch (error) {
+    ElMessage.error('翻译失败')
+  } finally {
+    translateLoading.value = false
+  }
 }
 
 // 翻译消息
@@ -245,7 +280,9 @@ defineExpose({
   toggleQuickActions,
   openSummary,
   openTranslate,
-  getSuggestions
+  getSuggestions,
+  selectMessageForTranslate,
+  translateDirectly
 })
 </script>
 

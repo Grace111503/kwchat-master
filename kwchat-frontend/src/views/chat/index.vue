@@ -45,7 +45,7 @@
             </el-tooltip>
             <el-tooltip content="AI功能" placement="bottom">
               <el-icon class="action-btn" @click="aiFeaturesRef?.toggleQuickActions()">
-                <Sparkles />
+                <Opportunity />
               </el-icon>
             </el-tooltip>
             <el-tooltip :content="isGroupChat ? '群信息' : '用户信息'" placement="bottom">
@@ -72,6 +72,7 @@
             :key="message.id"
             :message="message"
             :is-self="message.senderId === userInfo?.id"
+            :is-selected="isMultiSelectMode && isMessageSelected(message)"
             @play-voice="handlePlayVoice"
             @download="handleDownload"
             @play-video="handlePlayVideo"
@@ -80,6 +81,8 @@
             @forward="handleForwardMessage"
             @reply="handleReplyMessage"
             @delete="handleDeleteMessage"
+            @multi-select="handleMultiSelectFromAction"
+            @click="(e) => handleMessageClick(message, e)"
           />
         </div>
 
@@ -95,6 +98,28 @@
           <span class="search-count" v-if="messageSearchKeyword">
             {{ filteredMessages.length }} 条结果
           </span>
+        </div>
+
+        <!-- 多选工具栏 -->
+        <div class="multi-select-toolbar" v-if="isMultiSelectMode">
+          <div class="toolbar-left">
+            <el-icon class="check-all-icon" @click="selectAllMessages">
+              <CircleCheck />
+            </el-icon>
+            <span class="selected-count">已选择 {{ selectedMessages.length }} 条消息</span>
+          </div>
+          <div class="toolbar-actions">
+            <el-button size="small" @click="batchForwardMessages" :disabled="selectedMessages.length === 0">
+              转发
+            </el-button>
+            <el-button size="small" @click="batchFavoriteMessages" :disabled="selectedMessages.length === 0">
+              收藏
+            </el-button>
+            <el-button type="danger" size="small" @click="batchDeleteMessages" :disabled="selectedMessages.length === 0">
+              删除
+            </el-button>
+            <el-button size="small" @click="cancelMultiSelect">退出</el-button>
+          </div>
         </div>
 
         <!-- 正在输入提示 -->
@@ -156,7 +181,7 @@ import { useChatStore } from '@/store/chat'
 import { ElMessage } from 'element-plus'
 import { uploadImage, uploadFile, uploadVideo } from '@/api/file'
 import { getConversationMembers } from '@/api/conversation'
-import { recallMessage } from '@/api/message'
+import { recallMessage, deleteMessage } from '@/api/message'
 import websocketManager from '@/utils/websocket'
 import ConversationItem from '@/components/chat/ConversationItem.vue'
 import MessageBubble from '@/components/chat/MessageBubble.vue'
@@ -181,6 +206,10 @@ const userProfileVisible = ref(false)
 const selectedUser = ref(null)
 const typingUsers = ref([])
 const replyMessage = ref(null)
+
+// 多选模式
+const isMultiSelectMode = ref(false)
+const selectedMessages = ref([])
 
 // 是否为群聊
 const isGroupChat = computed(() => chatStore.currentConversation?.conversationType === 2)
@@ -360,6 +389,143 @@ const handleRecallMessage = async (message) => {
 
 const handleForwardMessage = (data) => {
   ElMessage.success('转发成功')
+}
+
+// 多选模式相关
+const toggleMultiSelectMode = () => {
+  isMultiSelectMode.value = !isMultiSelectMode.value
+  if (!isMultiSelectMode.value) {
+    selectedMessages.value = []
+  }
+}
+
+const handleMultiSelectMessage = (message) => {
+  console.log('处理多选消息:', message.id, '多选模式:', isMultiSelectMode.value)
+  if (!isMultiSelectMode.value) {
+    console.log('多选模式未启用，跳过')
+    return
+  }
+
+  const index = selectedMessages.value.findIndex(m => m.id === message.id)
+  console.log('消息索引:', index, '当前选中数量:', selectedMessages.value.length)
+  if (index === -1) {
+    selectedMessages.value.push(message)
+    console.log('添加消息，当前选中:', selectedMessages.value.length)
+    ElMessage.success('已选择')
+  } else {
+    selectedMessages.value.splice(index, 1)
+    console.log('移除消息，当前选中:', selectedMessages.value.length)
+    ElMessage.info('已取消选择')
+  }
+}
+
+const handleMultiSelectFromAction = (message) => {
+  console.log('从菜单触发多选模式')
+  isMultiSelectMode.value = true
+  selectedMessages.value = [message]
+  console.log('当前选中消息:', selectedMessages.value)
+  ElMessage.info('已进入多选模式，点击消息选择')
+}
+
+const cancelMultiSelect = () => {
+  isMultiSelectMode.value = false
+  selectedMessages.value = []
+}
+
+const selectAllMessages = () => {
+  if (selectedMessages.value.length === chatStore.messages.length) {
+    selectedMessages.value = []
+  } else {
+    selectedMessages.value = [...chatStore.messages]
+  }
+}
+
+const batchForwardMessages = () => {
+  if (selectedMessages.value.length === 0) {
+    ElMessage.warning('请先选择消息')
+    return
+  }
+  ElMessage.info('转发功能开发中')
+}
+
+const batchFavoriteMessages = async () => {
+  if (selectedMessages.value.length === 0) {
+    ElMessage.warning('请先选择消息')
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm(`确定要收藏选中的 ${selectedMessages.value.length} 条消息吗？`, '批量收藏', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'info'
+    })
+
+    // TODO: 调用收藏 API
+    ElMessage.success(`已收藏 ${selectedMessages.value.length} 条消息`)
+    cancelMultiSelect()
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('收藏失败')
+    }
+  }
+}
+
+const batchDeleteMessages = async () => {
+  if (selectedMessages.value.length === 0) {
+    ElMessage.warning('请先选择消息')
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm(`确定要删除选中的 ${selectedMessages.value.length} 条消息吗？`, '批量删除', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+
+    // 逐个删除
+    for (const message of selectedMessages.value) {
+      try {
+        await deleteMessage(message.id)
+      } catch (e) {
+        console.error('删除失败:', e)
+      }
+    }
+
+    // 从列表中移除
+    const selectedIds = selectedMessages.value.map(m => m.id)
+    chatStore.messages = chatStore.messages.filter(m => !selectedIds.includes(m.id))
+
+    ElMessage.success(`已删除 ${selectedMessages.value.length} 条消息`)
+    selectedMessages.value = []
+    isMultiSelectMode.value = false
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('删除失败')
+    }
+  }
+}
+
+const isMessageSelected = (message) => {
+  return selectedMessages.value.some(m => m.id === message.id)
+}
+
+const handleMessageClick = (message, event) => {
+  console.log('点击消息:', message.id, '多选模式:', isMultiSelectMode.value)
+
+  // 如果点击的是操作菜单区域，不处理
+  if (event?.target?.closest('.message-actions') || event?.target?.closest('.action-trigger') || event?.target?.closest('.el-popover')) {
+    console.log('点击了菜单区域，跳过')
+    return
+  }
+
+  if (isMultiSelectMode.value) {
+    console.log('执行多选操作')
+    handleMultiSelectMessage(message)
+  } else if (message.messageType === 1 && message.content) {
+    aiFeaturesRef.value?.selectMessageForTranslate(message)
+  }
 }
 
 const handleDeleteMessage = (message) => {
@@ -612,6 +778,41 @@ onUnmounted(() => {
   span {
     font-size: 12px;
     color: #999;
+  }
+}
+
+.multi-select-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: #e8f0fe;
+  border-top: 1px solid #d0e0f5;
+
+  .toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .check-all-icon {
+    font-size: 18px;
+    color: #2b7fff;
+    cursor: pointer;
+
+    &:hover {
+      color: #1a6fe0;
+    }
+  }
+
+  .selected-count {
+    font-size: 13px;
+    color: #333;
+  }
+
+  .toolbar-actions {
+    display: flex;
+    gap: 8px;
   }
 }
 
