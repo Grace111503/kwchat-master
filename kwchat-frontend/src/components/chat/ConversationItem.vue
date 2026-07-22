@@ -6,7 +6,12 @@
     @contextmenu.prevent="showContextMenu"
   >
     <div class="conversation-avatar">
-      <el-avatar :size="42" :src="conversation.avatar" shape="square">
+      <el-avatar
+        :size="42"
+        :src="conversation.avatar"
+        shape="square"
+        :style="!conversation.avatar ? getAvatarStyle(conversation.name) : {}"
+      >
         {{ getAvatarFallback(conversation.name) }}
       </el-avatar>
       <span class="online-dot" v-if="showOnlineDot && isOnline"></span>
@@ -121,6 +126,29 @@ const handleDelete = () => {
 const getAvatarFallback = (name) => {
   if (!name) return '会话'
   return name.length >= 2 ? name.slice(-2) : name
+}
+
+// 根据名称生成头像背景色
+const getAvatarStyle = (name) => {
+  if (!name) return { backgroundColor: '#409eff' }
+
+  const colors = [
+    '#409eff', '#67c23a', '#e6a23c', '#f56c6c',
+    '#909399', '#00b42a', '#2b7fff', '#722ed1',
+    '#13c2c2', '#eb2f96'
+  ]
+
+  // 根据名称计算颜色索引
+  let hash = 0
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  const index = Math.abs(hash) % colors.length
+
+  return {
+    backgroundColor: colors[index],
+    color: '#fff'
+  }
 }
 
 const displayName = computed(() => {
