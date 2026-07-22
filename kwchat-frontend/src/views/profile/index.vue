@@ -409,4 +409,26 @@ const handleFileChange = async (event) => {
   color: #999;
   margin-top: 2px;
 }
+
+// 移动端响应式
+@media (max-width: 768px) {
+  .profile-container {
+    height: calc(100vh - 56px);
+  }
+
+  .profile-header {
+    padding: 20px;
+  }
+
+  .profile-content {
+    margin: 8px;
+    padding: 12px;
+  }
+
+  .profile-form,
+  .password-form {
+    max-width: 100%;
+    padding: 0 8px;
+  }
+}
 </style>

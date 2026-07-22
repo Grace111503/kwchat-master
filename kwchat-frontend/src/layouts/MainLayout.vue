@@ -1,7 +1,7 @@
 <template>
   <div class="main-layout">
-    <!-- 左侧导航栏 -->
-    <div class="sidebar">
+    <!-- 左侧导航栏（桌面端） -->
+    <div class="sidebar hide-mobile">
       <div class="sidebar-header">
         <div class="user-avatar">
           <el-avatar :size="36" :src="userInfo?.avatar" shape="square">
@@ -43,6 +43,25 @@
     <!-- 主内容区 -->
     <div class="main-content">
       <router-view />
+    </div>
+
+    <!-- 底部导航栏（移动端） -->
+    <div class="bottom-nav hide-desktop safe-area-bottom">
+      <div
+        v-for="item in menuItems"
+        :key="item.path"
+        class="bottom-nav-item"
+        :class="{ active: isActive(item.path) }"
+        @click="navigateTo(item.path)"
+      >
+        <div class="nav-icon-wrapper">
+          <el-icon :size="22">
+            <component :is="item.icon" />
+          </el-icon>
+          <span v-if="item.badge" class="nav-badge">{{ item.badge > 99 ? '99+' : item.badge }}</span>
+        </div>
+        <span class="nav-label">{{ item.label }}</span>
+      </div>
     </div>
   </div>
 </template>
@@ -208,5 +227,79 @@ const handleLogout = () => {
 .main-content {
   flex: 1;
   overflow: hidden;
+}
+
+// 底部导航栏（移动端）
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  background: #fff;
+  border-top: 1px solid #e5e5e5;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  z-index: 100;
+}
+
+.bottom-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  height: 100%;
+  cursor: pointer;
+  color: #86909c;
+  transition: color 0.15s;
+
+  &:active {
+    opacity: 0.7;
+  }
+
+  &.active {
+    color: #2b7fff;
+  }
+}
+
+.nav-icon-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-label {
+  font-size: 10px;
+  margin-top: 2px;
+}
+
+.nav-badge {
+  position: absolute;
+  top: -6px;
+  right: -10px;
+  background: #f53f3f;
+  color: #fff;
+  font-size: 10px;
+  min-width: 16px;
+  height: 16px;
+  line-height: 16px;
+  text-align: center;
+  padding: 0 4px;
+  font-weight: 600;
+  border-radius: 8px;
+}
+
+// 移动端适配
+@media (max-width: 768px) {
+  .main-layout {
+    padding-bottom: 56px;
+  }
+
+  .main-content {
+    height: calc(100vh - 56px);
+  }
 }
 </style>

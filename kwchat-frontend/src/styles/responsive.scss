@@ -1,0 +1,69 @@
+/* 响应式工具类 */
+
+// 断点定义
+$mobile: 768px;
+$tablet: 1024px;
+$desktop: 1200px;
+
+// 移动端隐藏
+.hide-mobile {
+  @media (max-width: $mobile) {
+    display: none !important;
+  }
+}
+
+// 桌面端隐藏
+.hide-desktop {
+  @media (min-width: $mobile) {
+    display: none !important;
+  }
+}
+
+// 移动端显示（默认隐藏）
+.show-mobile {
+  display: none !important;
+  @media (max-width: $mobile) {
+    display: block !important;
+  }
+}
+
+// 移动端 flex 显示
+.show-mobile-flex {
+  display: none !important;
+  @media (max-width: $mobile) {
+    display: flex !important;
+  }
+}
+
+// 移动端全屏
+@media (max-width: $mobile) {
+  .mobile-fullscreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
+  }
+}
+
+// 移动端底部安全区域
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+// 移动端触摸优化
+@media (max-width: $mobile) {
+  // 增加可点击区域
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  // 禁用 hover 效果
+  .no-hover:hover {
+    background: transparent !important;
+  }
+}

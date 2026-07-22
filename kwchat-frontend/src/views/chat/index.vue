@@ -1,7 +1,7 @@
 <template>
   <div class="chat-container">
-    <!-- 左侧会话列表 -->
-    <div class="conversation-list">
+    <!-- 左侧会话列表（桌面端始终显示，移动端无选中会话时显示） -->
+    <div class="conversation-list" :class="{ 'mobile-hidden': chatStore.currentConversation }">
       <div class="conversation-header">
         <el-input
           v-model="searchKeyword"
@@ -12,13 +12,31 @@
       </div>
 
       <div class="conversation-items">
-        <ConversationItem
-          v-for="conversation in filteredConversations"
-          :key="conversation.id"
-          :conversation="conversation"
-          :is-active="chatStore.currentConversation?.id === conversation.id"
-          @select="handleSelectConversation"
-        />
+        <!-- 置顶会话区域 -->
+        <div v-if="pinnedConversations.length > 0" class="pinned-section">
+          <div class="section-label">置顶会话</div>
+          <ConversationItem
+            v-for="conversation in pinnedConversations"
+            :key="conversation.id"
+            :conversation="conversation"
+            :is-active="chatStore.currentConversation?.id === conversation.id"
+            @select="handleSelectConversation"
+            @delete="handleDeleteConversation"
+          />
+        </div>
+
+        <!-- 普通会话区域 -->
+        <div v-if="unpinnedConversations.length > 0" class="unpinned-section">
+          <div v-if="pinnedConversations.length > 0" class="section-label">最近会话</div>
+          <ConversationItem
+            v-for="conversation in unpinnedConversations"
+            :key="conversation.id"
+            :conversation="conversation"
+            :is-active="chatStore.currentConversation?.id === conversation.id"
+            @select="handleSelectConversation"
+            @delete="handleDeleteConversation"
+          />
+        </div>
 
         <div v-if="filteredConversations.length === 0" class="empty-tip">
           <span>暂无会话</span>
@@ -26,11 +44,15 @@
       </div>
     </div>
 
-    <!-- 右侧聊天窗口 -->
-    <div class="chat-window">
+    <!-- 右侧聊天窗口（桌面端始终显示，移动端有选中会话时显示） -->
+    <div class="chat-window" :class="{ 'mobile-fullscreen': chatStore.currentConversation }">
       <template v-if="chatStore.currentConversation">
         <!-- 聊天头部 -->
         <div class="chat-header">
+          <!-- 移动端返回按钮 -->
+          <el-icon class="back-btn hide-desktop" @click="goBack">
+            <ArrowLeft />
+          </el-icon>
           <div class="chat-title">
             <span class="name">{{ chatStore.currentConversation.name }}</span>
             <span v-if="chatStore.currentConversation.conversationType === 2" class="member-count">
@@ -235,6 +257,39 @@ const filteredConversations = computed(() => {
     item.name?.includes(searchKeyword.value)
   )
 })
+
+// 置顶会话
+const pinnedConversations = computed(() => {
+  return filteredConversations.value.filter(c => c.isTop)
+})
+
+// 普通会话
+const unpinnedConversations = computed(() => {
+  return filteredConversations.value.filter(c => !c.isTop)
+})
+
+// 移动端返回会话列表
+const goBack = () => {
+  chatStore.currentConversation = null
+}
+
+const handleDeleteConversation = (conversation) => {
+  ElMessageBox.confirm('确定要删除该会话吗？', '删除会话', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(() => {
+    const index = chatStore.conversations.findIndex(c => c.id === conversation.id)
+    if (index !== -1) {
+      chatStore.conversations.splice(index, 1)
+    }
+    // 如果删除的是当前选中的会话，清空当前会话
+    if (chatStore.currentConversation?.id === conversation.id) {
+      chatStore.currentConversation = null
+    }
+    ElMessage.success('会话已删除')
+  }).catch(() => {})
+}
 
 const handleSelectConversation = async (conversation) => {
   await chatStore.selectConversation(conversation)
@@ -677,6 +732,19 @@ onUnmounted(() => {
   overflow-y: auto;
 }
 
+.section-label {
+  font-size: 12px;
+  color: #999;
+  padding: 8px 12px 4px;
+  background: #f5f5f5;
+  border-bottom: 1px solid #eee;
+}
+
+.pinned-section {
+  background: #fafafa;
+  border-bottom: 8px solid #f0f0f0;
+}
+
 .empty-tip {
   padding: 60px 0;
   text-align: center;
@@ -837,6 +905,79 @@ onUnmounted(() => {
     font-size: 12px;
     color: #999;
     white-space: nowrap;
+  }
+}
+
+// 移动端响应式
+@media (max-width: 768px) {
+  .chat-container {
+    height: calc(100vh - 56px);
+    position: relative;
+  }
+
+  .conversation-list {
+    width: 100%;
+    border-right: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10;
+    transition: transform 0.3s;
+
+    &.mobile-hidden {
+      transform: translateX(-100%);
+    }
+  }
+
+  .chat-window {
+    width: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 5;
+    transform: translateX(100%);
+    transition: transform 0.3s;
+
+    &.mobile-fullscreen {
+      transform: translateX(0);
+    }
+  }
+
+  .chat-header {
+    height: 48px;
+    padding: 0 12px;
+  }
+
+  .back-btn {
+    font-size: 20px;
+    cursor: pointer;
+    margin-right: 8px;
+    color: #333;
+  }
+
+  .chat-title .name {
+    font-size: 14px;
+  }
+
+  .message-content {
+    max-width: 75%;
+  }
+
+  .multi-select-toolbar {
+    padding: 6px 12px;
+
+    .toolbar-actions {
+      gap: 4px;
+
+      .el-button {
+        padding: 4px 8px;
+        font-size: 12px;
+      }
+    }
   }
 }
 </style>

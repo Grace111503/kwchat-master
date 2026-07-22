@@ -1,10 +1,14 @@
 <template>
-  <div
-    class="conversation-item"
-    :class="{ active: isActive }"
-    @click="$emit('select', conversation)"
-    @contextmenu.prevent="showContextMenu"
-  >
+  <div class="conversation-item-wrapper">
+    <div
+      class="conversation-item"
+      :class="{ active: isActive, 'is-pinned': conversation.isTop, 'swiped': isSwiped }"
+      @click="handleClick"
+      @contextmenu.prevent="showContextMenu"
+      @touchstart="handleTouchStart"
+      @touchmove="handleTouchMove"
+      @touchend="handleTouchEnd"
+    >
     <div class="conversation-avatar">
       <el-avatar
         :size="42"
@@ -15,7 +19,6 @@
         {{ getAvatarFallback(conversation.name) }}
       </el-avatar>
       <span class="online-dot" v-if="showOnlineDot && isOnline"></span>
-      <span class="pin-icon" v-if="conversation.isTop">📌</span>
     </div>
 
     <div class="conversation-info">
@@ -36,6 +39,16 @@
           :hidden="!conversation.unreadCount"
           class="unread-badge"
         />
+      </div>
+    </div>
+
+    <!-- 滑动操作按钮（移动端） -->
+    <div class="swipe-actions">
+      <div class="swipe-btn pin-btn" @click.stop="handlePin">
+        <span>{{ conversation.isTop ? '取消置顶' : '置顶' }}</span>
+      </div>
+      <div class="swipe-btn delete-btn" @click.stop="handleDelete">
+        <span>删除</span>
       </div>
     </div>
 
@@ -60,6 +73,7 @@
         </div>
       </div>
     </el-popover>
+    </div>
   </div>
 </template>
 
@@ -87,21 +101,56 @@ const emit = defineEmits(['select', 'pin', 'mute', 'delete'])
 const showMenu = ref(false)
 const menuRef = ref(null)
 const generatedAvatar = ref(null)
+const isSwiped = ref(false)
+const touchStartX = ref(0)
+const touchCurrentX = ref(0)
 
 const showContextMenu = (e) => {
   menuRef.value = e.target
   showMenu.value = true
 }
 
+// 触摸事件处理（移动端左滑）
+const handleClick = () => {
+  if (isSwiped.value) {
+    isSwiped.value = false
+    return
+  }
+  emit('select', props.conversation)
+}
+
+const handleTouchStart = (e) => {
+  touchStartX.value = e.touches[0].clientX
+  touchCurrentX.value = e.touches[0].clientX
+}
+
+const handleTouchMove = (e) => {
+  touchCurrentX.value = e.touches[0].clientX
+  const diff = touchStartX.value - touchCurrentX.value
+  if (diff > 30) {
+    isSwiped.value = true
+  } else if (diff < -10) {
+    isSwiped.value = false
+  }
+}
+
+const handleTouchEnd = () => {
+  // 保持滑动状态，点击其他地方时恢复
+}
+
 const handlePin = async () => {
   showMenu.value = false
+  isSwiped.value = false
   try {
     const newIsTop = props.conversation.isTop ? 0 : 1
+    console.log('置顶操作:', props.conversation.id, '新状态:', newIsTop)
     await setTop(props.conversation.id, newIsTop)
+    console.log('置顶API调用成功')
     props.conversation.isTop = newIsTop
     ElMessage.success(newIsTop ? '已置顶' : '已取消置顶')
     emit('pin', { conversation: props.conversation, isTop: newIsTop })
   } catch (error) {
+    console.error('置顶失败:', error)
     ElMessage.error('操作失败')
   }
 }
@@ -120,7 +169,7 @@ const handleMute = async () => {
 }
 
 const handleDelete = () => {
-  showMenu.value = false
+  isSwiped.value = false
   emit('delete', props.conversation)
 }
 
@@ -231,20 +280,65 @@ const formatTime = (time) => {
 </script>
 
 <style lang="scss" scoped>
+.conversation-item-wrapper {
+  position: relative;
+}
+
 .conversation-item {
   display: flex;
   align-items: center;
   padding: 10px 12px;
   cursor: pointer;
-  transition: background 0.1s;
+  transition: transform 0.2s, background 0.1s;
   border-bottom: 1px solid #f0f0f0;
+  position: relative;
+  background: #fff;
 
   &:hover {
     background: #f0f0f0;
   }
 
+  &.is-pinned {
+    background: #f5f7fa;
+
+    &:hover {
+      background: #ecf0f5;
+    }
+  }
+
   &.active {
     background: #e8f0fe;
+  }
+
+  &.swiped {
+    transform: translateX(-120px);
+  }
+}
+
+.swipe-actions {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  z-index: -1;
+
+  .swipe-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+    color: #fff;
+    font-size: 13px;
+    cursor: pointer;
+
+    &.pin-btn {
+      background: #2b7fff;
+    }
+
+    &.delete-btn {
+      background: #f56c6c;
+    }
   }
 }
 
@@ -261,13 +355,6 @@ const formatTime = (time) => {
   height: 8px;
   background: #00b42a;
   border: 2px solid #fff;
-}
-
-.pin-icon {
-  position: absolute;
-  top: -4px;
-  right: -4px;
-  font-size: 12px;
 }
 
 .context-menu {

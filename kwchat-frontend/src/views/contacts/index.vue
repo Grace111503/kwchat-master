@@ -936,4 +936,34 @@ onMounted(() => {
 .check-icon {
   color: #2b7fff;
 }
+
+// 移动端响应式
+@media (max-width: 768px) {
+  .contacts-container {
+    flex-direction: column;
+    height: calc(100vh - 56px);
+  }
+
+  .contacts-sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid #e5e5e5;
+  }
+
+  .contact-detail {
+    display: none;
+  }
+
+  .contacts-header {
+    padding: 8px 12px;
+  }
+
+  .detail-header {
+    padding: 20px;
+  }
+
+  .detail-info {
+    padding: 0 16px;
+  }
+}
 </style>

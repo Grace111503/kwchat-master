@@ -21,6 +21,16 @@ export const useChatStore = defineStore('chat', () => {
     return conversations.value.reduce((sum, conv) => sum + (conv.unreadCount || 0), 0)
   })
 
+  // 置顶会话
+  const pinnedConversations = computed(() => {
+    return conversations.value.filter(c => c.isTop)
+  })
+
+  // 普通会话
+  const unpinnedConversations = computed(() => {
+    return conversations.value.filter(c => !c.isTop)
+  })
+
   // WebSocket连接
   const initWebSocket = () => {
     const token = getToken()
@@ -52,12 +62,15 @@ export const useChatStore = defineStore('chat', () => {
     try {
       const res = await getConversationList()
       if (res.code === 200) {
-        // 置顶会话排在前面
+        // 确保置顶会话排在前面
         const list = res.data || []
+        console.log('会话列表数据:', list.map(c => ({ id: c.id, name: c.name, isTop: c.isTop })))
         conversations.value = list.sort((a, b) => {
+          // 置顶优先
           if (a.isTop && !b.isTop) return -1
           if (!a.isTop && b.isTop) return 1
-          return 0
+          // 然后按最后消息时间排序
+          return new Date(b.lastMessageTime || 0) - new Date(a.lastMessageTime || 0)
         })
       }
     } catch (error) {
@@ -188,6 +201,8 @@ export const useChatStore = defineStore('chat', () => {
     pageSize,
     unreadFriendRequests,
     totalUnread,
+    pinnedConversations,
+    unpinnedConversations,
     initWebSocket,
     disconnectWebSocket,
     loadConversations,
