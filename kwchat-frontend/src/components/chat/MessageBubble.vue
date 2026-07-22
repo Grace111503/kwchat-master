@@ -72,22 +72,15 @@
 
         <!-- 语音消息 -->
         <template v-else-if="message.messageType === 5">
-          <div class="message-voice">
-            <div class="voice-play-btn" @click="playVoice">
-              <el-icon :size="18" :class="{ 'playing': isPlaying }">
-                <VideoPlay v-if="!isPlaying" />
-                <VideoPause v-else />
-              </el-icon>
-              <span class="voice-duration">{{ message.duration || 0 }}s</span>
-              <div class="voice-wave" v-if="isPlaying">
-                <span></span><span></span><span></span>
-              </div>
+          <div class="message-voice" @click="playVoice">
+            <el-icon :size="18" :class="{ 'playing': isPlaying }">
+              <VideoPlay v-if="!isPlaying" />
+              <VideoPause v-else />
+            </el-icon>
+            <span class="voice-duration">{{ message.duration || 0 }}s</span>
+            <div class="voice-wave" v-if="isPlaying">
+              <span></span><span></span><span></span>
             </div>
-            <el-tooltip content="下载语音" placement="top">
-              <el-icon class="voice-download" @click.stop="downloadVoice">
-                <Download />
-              </el-icon>
-            </el-tooltip>
           </div>
         </template>
 
@@ -204,40 +197,64 @@ const playVoice = async () => {
     return
   }
 
+  // 停止当前播放
   if (isPlaying.value && audio) {
     audio.pause()
+    audio.currentTime = 0
     isPlaying.value = false
     return
   }
 
+  console.log('尝试播放语音:', props.message.fileUrl)
+
   try {
-    // 获取音频文件
+    // 获取音频文件并创建 blob URL
     const response = await fetch(props.message.fileUrl)
-    if (!response.ok) throw new Error('文件获取失败')
+    console.log('响应状态:', response.status, response.headers.get('content-type'))
+
+    if (!response.ok) throw new Error('文件获取失败: ' + response.status)
 
     const blob = await response.blob()
+    console.log('文件大小:', blob.size, '类型:', blob.type)
+
+    // 检查文件大小（太小可能是空文件或损坏）
+    if (blob.size < 100) {
+      ElMessage.error('语音文件无效（文件过小）')
+      return
+    }
+
+    // 创建 blob URL
     const blobUrl = URL.createObjectURL(blob)
+    console.log('Blob URL:', blobUrl)
 
     audio = new Audio(blobUrl)
+
+    // 设置音频类型
+    audio.type = blob.type || 'audio/webm'
 
     audio.onended = () => {
       isPlaying.value = false
       URL.revokeObjectURL(blobUrl)
     }
 
-    audio.onerror = () => {
+    audio.onerror = (e) => {
       isPlaying.value = false
       URL.revokeObjectURL(blobUrl)
-      // 播放失败，提示下载
-      ElMessage.warning('语音格式不支持播放，请点击下载')
+      const errorCode = e.target.error?.code
+      const errorMsg = e.target.error?.message || '未知错误'
+      console.error('音频播放错误:', errorCode, errorMsg)
+      ElMessage.error('语音播放失败: ' + errorMsg)
     }
+
+    // 预加载音频
+    audio.load()
 
     await audio.play()
     isPlaying.value = true
   } catch (e) {
     isPlaying.value = false
     console.error('语音播放失败:', e)
-    ElMessage.warning('语音播放失败，请点击下载')
+    ElMessage.error('语音播放失败: ' + e.message)
   }
 }
 const downloadFile = () => emit('download', props.message)
@@ -276,7 +293,15 @@ const handleTranslateMessage = (message) => {
 // 下载语音
 const downloadVoice = () => {
   if (!props.message.fileUrl) return
-  window.open(props.message.fileUrl, '_blank')
+  // 创建下载链接
+  const link = document.createElement('a')
+  link.href = props.message.fileUrl
+  link.download = `voice_${props.message.id}.audio`
+  link.target = '_blank'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  ElMessage.success('语音已下载，请用播放器打开')
 }
 
 const getReplyPreviewText = () => {
@@ -500,28 +525,24 @@ const getReplyPreviewText = () => {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 2px 4px;
+  padding: 8px 12px;
   min-width: 100px;
+  cursor: pointer;
+  background: #f0f9ff;
+  border-radius: 16px;
+  transition: background 0.2s;
 
-  .voice-play-btn {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    cursor: pointer;
-
-    .el-icon.playing {
-      color: #2b7fff;
-    }
+  &:hover {
+    background: #e0f2fe;
   }
 
-  .voice-download {
-    cursor: pointer;
-    color: #999;
-    font-size: 14px;
+  .el-icon.playing {
+    color: #2b7fff;
+  }
 
-    &:hover {
-      color: #2b7fff;
-    }
+  .voice-duration {
+    font-size: 13px;
+    color: #333;
   }
 }
 

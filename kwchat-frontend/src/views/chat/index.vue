@@ -83,7 +83,7 @@
             @delete="handleDeleteMessage"
             @translate="handleTranslateMessage"
             @multi-select="handleMultiSelectFromAction"
-            @click="handleMessageClick(message)"
+            @click="(e) => handleMessageClick(message, e)"
           />
         </div>
 
@@ -103,12 +103,17 @@
 
         <!-- 多选工具栏 -->
         <div class="multi-select-toolbar" v-if="isMultiSelectMode">
-          <span class="selected-count">已选择 {{ selectedMessages.length }} 条消息</span>
+          <div class="toolbar-left">
+            <el-icon class="check-all-icon" @click="selectAllMessages">
+              <CircleCheck />
+            </el-icon>
+            <span class="selected-count">已选择 {{ selectedMessages.length }} 条消息</span>
+          </div>
           <div class="toolbar-actions">
             <el-button type="danger" size="small" @click="batchDeleteMessages" :disabled="selectedMessages.length === 0">
               删除 ({{ selectedMessages.length }})
             </el-button>
-            <el-button size="small" @click="cancelMultiSelect">取消</el-button>
+            <el-button size="small" @click="cancelMultiSelect">退出多选</el-button>
           </div>
         </div>
 
@@ -332,18 +337,34 @@ const handleSendVoice = async (file) => {
   try {
     const res = await uploadFile(file)
     if (res.code === 200) {
+      // 使用录音时长，如果有的话
+      const duration = file.recordingDuration || await getAudioDuration(file)
       await chatStore.sendMessage(chatStore.currentConversation.id, 5, null, {
         fileUrl: res.data.url,
         fileName: res.data.originalFileName,
         fileSize: res.data.fileSize,
         fileType: res.data.fileType,
-        duration: 3 // 默认3秒，实际应从录音获取
+        duration: duration
       })
       scrollToBottom()
     }
   } catch (error) {
     ElMessage.error('语音发送失败')
   }
+}
+
+// 获取音频时长
+const getAudioDuration = (file) => {
+  return new Promise((resolve) => {
+    const audio = new Audio()
+    audio.onloadedmetadata = () => {
+      resolve(Math.round(audio.duration))
+    }
+    audio.onerror = () => {
+      resolve(0)
+    }
+    audio.src = URL.createObjectURL(file)
+  })
 }
 
 let typingTimer = null
@@ -432,14 +453,17 @@ const handleMultiSelectMessage = (message) => {
   const index = selectedMessages.value.findIndex(m => m.id === message.id)
   if (index === -1) {
     selectedMessages.value.push(message)
+    ElMessage.success('已选择')
   } else {
     selectedMessages.value.splice(index, 1)
+    ElMessage.info('已取消选择')
   }
 }
 
 const handleMultiSelectFromAction = (message) => {
   isMultiSelectMode.value = true
   selectedMessages.value = [message]
+  ElMessage.info('已进入多选模式，点击消息选择')
 }
 
 const batchDeleteMessages = async () => {
@@ -478,8 +502,21 @@ const cancelMultiSelect = () => {
   selectedMessages.value = []
 }
 
+const selectAllMessages = () => {
+  if (selectedMessages.value.length === chatStore.messages.length) {
+    selectedMessages.value = []
+  } else {
+    selectedMessages.value = [...chatStore.messages]
+  }
+}
+
 // 点击消息处理
-const handleMessageClick = (message) => {
+const handleMessageClick = (message, event) => {
+  // 如果点击的是操作菜单区域，不处理
+  if (event?.target?.closest('.message-actions') || event?.target?.closest('.action-trigger') || event?.target?.closest('.el-popover')) {
+    return
+  }
+
   if (isMultiSelectMode.value) {
     handleMultiSelectMessage(message)
   } else if (message.messageType === 1 && message.content) {
@@ -750,6 +787,22 @@ onUnmounted(() => {
   padding: 8px 16px;
   background: #e8f0fe;
   border-top: 1px solid #d0e0f5;
+
+  .toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .check-all-icon {
+    font-size: 18px;
+    color: #2b7fff;
+    cursor: pointer;
+
+    &:hover {
+      color: #1a6fe0;
+    }
+  }
 
   .selected-count {
     font-size: 13px;

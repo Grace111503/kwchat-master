@@ -236,47 +236,60 @@ const recordVideo = () => {
 // 开始录音
 const startVoiceRecord = async () => {
   try {
+    // 检查浏览器支持
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      ElMessage.error('您的浏览器不支持录音功能')
+      return
+    }
+
+    if (typeof MediaRecorder === 'undefined') {
+      ElMessage.error('您的浏览器不支持录音功能')
+      return
+    }
+
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
 
-    // 按优先级尝试支持的音频格式
-    const supportedTypes = [
-      'audio/mp4',
-      'audio/webm;codecs=opus',
-      'audio/webm',
-      'audio/ogg;codecs=opus',
-      'audio/wav'
-    ]
-
+    // 使用最兼容的格式
     let mimeType = ''
-    for (const type of supportedTypes) {
-      if (MediaRecorder.isTypeSupported(type)) {
-        mimeType = type
-        break
-      }
+    if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+      mimeType = 'audio/webm;codecs=opus'
+    } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+      mimeType = 'audio/webm'
+    } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+      mimeType = 'audio/mp4'
     }
+
+    console.log('使用录音格式:', mimeType || '默认')
 
     mediaRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream)
     audioChunks = []
 
     mediaRecorder.ondataavailable = (e) => {
+      console.log('录音数据:', e.data.size, '字节')
       if (e.data.size > 0) {
         audioChunks.push(e.data)
       }
     }
 
     mediaRecorder.onstop = () => {
-      const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/mp4' })
-      // 根据格式确定扩展名
-      let ext = 'm4a'
-      if (mediaRecorder.mimeType?.includes('webm')) ext = 'webm'
-      else if (mediaRecorder.mimeType?.includes('ogg')) ext = 'ogg'
-      else if (mediaRecorder.mimeType?.includes('wav')) ext = 'wav'
+      const totalSize = audioChunks.reduce((sum, chunk) => sum + chunk.size, 0)
+      console.log('录音完成，总大小:', totalSize, '字节，时长:', recordingTime.value, '秒')
 
-      const file = new File([blob], `voice_${Date.now()}.${ext}`, { type: mediaRecorder.mimeType || 'audio/mp4' })
+      if (totalSize < 100) {
+        ElMessage.warning('录音数据过短，请长按麦克风录音')
+        stream.getTracks().forEach(track => track.stop())
+        return
+      }
+
+      const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' })
+      const file = new File([blob], `voice_${Date.now()}.webm`, { type: mediaRecorder.mimeType || 'audio/webm' })
+      // 将录音时长传递给父组件
+      file.recordingDuration = recordingTime.value
       emit('send-voice', file)
       stream.getTracks().forEach(track => track.stop())
     }
 
+    // 不使用 timeslice，一次性收集所有数据
     mediaRecorder.start()
     isRecording.value = true
     recordingTime.value = 0
@@ -288,8 +301,17 @@ const startVoiceRecord = async () => {
         stopVoiceRecord()
       }
     }, 1000)
+
+    ElMessage.success('开始录音，请长按说话')
   } catch (error) {
-    ElMessage.error('无法访问麦克风，请检查权限')
+    console.error('录音启动失败:', error)
+    if (error.name === 'NotAllowedError') {
+      ElMessage.error('麦克风权限被拒绝，请在浏览器设置中允许访问麦克风')
+    } else if (error.name === 'NotFoundError') {
+      ElMessage.error('未找到麦克风设备')
+    } else {
+      ElMessage.error('录音启动失败: ' + error.message)
+    }
   }
 }
 
