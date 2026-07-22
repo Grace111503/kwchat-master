@@ -21,6 +21,11 @@
           <Picture />
         </el-icon>
       </el-tooltip>
+      <el-tooltip :content="isMobile() ? '拍照' : '选择图片'" placement="top">
+        <el-icon class="toolbar-btn" @click="takePhoto">
+          <Camera />
+        </el-icon>
+      </el-tooltip>
       <el-tooltip content="文件" placement="top">
         <el-icon class="toolbar-btn" @click="triggerFileUpload">
           <Folder />
@@ -31,11 +36,34 @@
           <VideoCamera />
         </el-icon>
       </el-tooltip>
+      <el-tooltip :content="isMobile() ? '录制视频' : '选择视频'" placement="top">
+        <el-icon class="toolbar-btn" @click="recordVideo">
+          <VideoPlay />
+        </el-icon>
+      </el-tooltip>
+      <el-tooltip content="语音（长按录音）" placement="top">
+        <el-icon
+          class="toolbar-btn"
+          :class="{ 'recording': isRecording }"
+          @mousedown="startVoiceRecord"
+          @mouseup="stopVoiceRecord"
+          @mouseleave="cancelVoiceRecord"
+        >
+          <Microphone />
+        </el-icon>
+      </el-tooltip>
       <el-tooltip content="@提醒" placement="top" v-if="isGroup">
         <el-icon class="toolbar-btn" @click="showMentionList = !showMentionList">
           <Bell />
         </el-icon>
       </el-tooltip>
+    </div>
+
+    <!-- 录音提示 -->
+    <div class="recording-tip" v-if="isRecording">
+      <span class="recording-dot"></span>
+      <span>正在录音... {{ recordingTime }}s</span>
+      <span class="tip">松开发送</span>
     </div>
 
     <!-- 表情面板 -->

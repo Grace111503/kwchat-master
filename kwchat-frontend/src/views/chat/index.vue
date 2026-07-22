@@ -156,7 +156,7 @@ import { useChatStore } from '@/store/chat'
 import { ElMessage } from 'element-plus'
 import { uploadImage, uploadFile, uploadVideo } from '@/api/file'
 import { getConversationMembers } from '@/api/conversation'
-import { recallMessage } from '@/api/message'
+import { recallMessage, deleteMessage } from '@/api/message'
 import websocketManager from '@/utils/websocket'
 import ConversationItem from '@/components/chat/ConversationItem.vue'
 import MessageBubble from '@/components/chat/MessageBubble.vue'
@@ -363,7 +363,7 @@ const handleForwardMessage = (data) => {
 }
 
 const handleDeleteMessage = (message) => {
-  // 从消息列表中移除
+  // MessageActions 已经调用了 API，这里只从本地列表移除
   const index = chatStore.messages.findIndex(m => m.id === message.id)
   if (index !== -1) {
     chatStore.messages.splice(index, 1)
