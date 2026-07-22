@@ -9,7 +9,7 @@
       <el-avatar
         :size="42"
         :src="avatarUrl"
-        shape="square"
+        shape="circle"
         :style="!avatarUrl ? getAvatarStyle(conversation.name) : {}"
       >
         {{ getAvatarFallback(conversation.name) }}

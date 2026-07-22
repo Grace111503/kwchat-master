@@ -64,7 +64,7 @@ export async function generateGroupAvatar(avatars = [], size = 200) {
     const x = gap + col * (cellSize + gap)
     const y = gap + row * (cellSize + gap)
 
-    await drawSquareImage(ctx, images[i], x, y, cellSize)
+    await drawCircularImage(ctx, images[i], x, y, cellSize)
   }
 
   // 导出图片
@@ -85,8 +85,8 @@ async function generateSingleAvatar(avatarUrl, size) {
     canvas.height = size
     const ctx = canvas.getContext('2d')
 
-    // 绘制正方形头像
-    await drawSquareImage(ctx, img, 0, 0, size)
+    // 绘制圆形头像
+    await drawCircularImage(ctx, img, 0, 0, size)
 
     return canvas.toDataURL('image/png')
   } catch (e) {
@@ -104,9 +104,11 @@ function generateDefaultAvatar(size) {
   canvas.height = size
   const ctx = canvas.getContext('2d')
 
-  // 蓝色背景（正方形）
+  // 蓝色背景（圆形）
   ctx.fillStyle = '#409eff'
-  ctx.fillRect(0, 0, size, size)
+  ctx.beginPath()
+  ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2)
+  ctx.fill()
 
   // 白色文字
   ctx.fillStyle = '#ffffff'
@@ -149,23 +151,29 @@ async function loadImages(urls) {
 }
 
 /**
- * 绘制正方形图片
+ * 绘制圆形图片
  */
-async function drawSquareImage(ctx, img, x, y, size) {
+async function drawCircularImage(ctx, img, x, y, size) {
   ctx.save()
 
-  // 计算图片绘制区域（保持正方形，居中裁剪）
+  // 创建圆形路径
+  ctx.beginPath()
+  ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2)
+  ctx.closePath()
+  ctx.clip()
+
+  // 计算图片绘制区域（保持正方形）
   const imgRatio = img.width / img.height
   let drawWidth, drawHeight, drawX, drawY
 
   if (imgRatio > 1) {
-    // 宽图 - 裁剪左右
+    // 宽图
     drawHeight = size
     drawWidth = size * imgRatio
     drawX = x - (drawWidth - size) / 2
     drawY = y
   } else {
-    // 高图或正方形 - 裁剪上下
+    // 高图或正方形
     drawWidth = size
     drawHeight = size / imgRatio
     drawX = x

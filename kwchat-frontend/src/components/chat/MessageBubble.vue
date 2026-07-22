@@ -3,7 +3,7 @@
     <el-avatar
       :size="34"
       :src="message.senderAvatar"
-      shape="square"
+      shape="circle"
       class="message-avatar"
       :class="{ 'clickable': !isSelf }"
       :style="!message.senderAvatar ? getAvatarStyle(message.senderName) : {}"
