@@ -8,9 +8,9 @@
     <div class="conversation-avatar">
       <el-avatar
         :size="42"
-        :src="conversation.avatar"
+        :src="avatarUrl"
         shape="square"
-        :style="!conversation.avatar ? getAvatarStyle(conversation.name) : {}"
+        :style="!avatarUrl ? getAvatarStyle(conversation.name) : {}"
       >
         {{ getAvatarFallback(conversation.name) }}
       </el-avatar>
@@ -64,11 +64,12 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import 'dayjs/locale/zh-cn'
-import { setTop, setDoNotDisturb } from '@/api/conversation'
+import { setTop, setDoNotDisturb, getConversationMembers } from '@/api/conversation'
+import { generateGroupAvatar } from '@/utils/groupAvatar'
 import { ElMessage } from 'element-plus'
 
 dayjs.extend(relativeTime)
@@ -85,6 +86,7 @@ const emit = defineEmits(['select', 'pin', 'mute', 'delete'])
 
 const showMenu = ref(false)
 const menuRef = ref(null)
+const generatedAvatar = ref(null)
 
 const showContextMenu = (e) => {
   menuRef.value = e.target
@@ -156,6 +158,61 @@ const displayName = computed(() => {
   if (conversationType === 1) return name
   return `${name} (${memberCount})`
 })
+
+// 生成群聊头像
+const generateAvatar = async () => {
+  console.log('尝试生成群头像:', props.conversation.id, props.conversation.conversationType, props.conversation.avatar)
+
+  // 只处理群聊（conversationType === 2）且没有自定义头像的情况
+  if (props.conversation.conversationType !== 2 || props.conversation.avatar) {
+    console.log('跳过生成:', props.conversation.conversationType !== 2 ? '不是群聊' : '已有头像')
+    return
+  }
+
+  try {
+    // 获取群成员列表
+    console.log('获取群成员:', props.conversation.id)
+    const res = await getConversationMembers(props.conversation.id)
+    console.log('群成员响应:', res)
+
+    if (res.code === 200 && res.data && res.data.length > 0) {
+      // 提取前9个成员的头像URL
+      const avatars = res.data
+        .slice(0, 9)
+        .map(member => member.avatar)
+        .filter(avatar => avatar) // 过滤空头像
+
+      console.log('成员头像:', avatars)
+
+      if (avatars.length > 0) {
+        // 生成群头像
+        console.log('开始生成群头像...')
+        generatedAvatar.value = await generateGroupAvatar(avatars, 200)
+        console.log('群头像生成成功:', generatedAvatar.value?.substring(0, 50) + '...')
+      } else {
+        console.log('没有可用的头像')
+      }
+    } else {
+      console.log('获取群成员失败或为空')
+    }
+  } catch (error) {
+    console.error('生成群头像失败:', error)
+  }
+}
+
+// 计算最终显示的头像URL
+const avatarUrl = computed(() => {
+  const url = props.conversation.avatar || generatedAvatar.value
+  console.log('avatarUrl:', url ? url.substring(0, 50) + '...' : 'null')
+  return url
+})
+
+// 监听会话变化，重新生成头像
+watch(() => props.conversation.id, () => {
+  if (props.conversation.conversationType === 2 && !props.conversation.avatar) {
+    generateAvatar()
+  }
+}, { immediate: true })
 
 const formatTime = (time) => {
   if (!time) return ''
