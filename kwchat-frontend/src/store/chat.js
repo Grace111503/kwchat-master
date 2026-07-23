@@ -64,7 +64,7 @@ export const useChatStore = defineStore('chat', () => {
       if (res.code === 200) {
         // 确保置顶会话排在前面
         const list = res.data || []
-        console.log('会话列表数据:', list.map(c => ({ id: c.id, name: c.name, isTop: c.isTop })))
+        console.log('会话列表数据:', list.map(c => ({id: c.id, name: c.name, isTop: c.isTop})))
         conversations.value = list.sort((a, b) => {
           // 置顶优先
           if (a.isTop && !b.isTop) return -1
@@ -176,6 +176,7 @@ export const useChatStore = defineStore('chat', () => {
       })
     }
   }
+
 
   // 处理已读回执
   const handleReadReceipt = (data) => {
