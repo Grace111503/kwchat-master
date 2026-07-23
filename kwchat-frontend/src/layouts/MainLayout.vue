@@ -94,6 +94,12 @@ const menuItems = computed(() => [
     badge: chatStore.unreadFriendRequests
   },
   {
+    path: '/favorites',
+    icon: 'Star',
+    label: '收藏',
+    badge: 0
+  },
+  {
     path: '/profile',
     icon: 'Setting',
     label: '设置',

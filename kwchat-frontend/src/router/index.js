@@ -37,6 +37,12 @@ const routes = [
         name: 'Profile',
         component: () => import('@/views/profile/index.vue'),
         meta: { title: '个人中心' }
+      },
+      {
+        path: 'favorites',
+        name: 'Favorites',
+        component: () => import('@/views/favorites/index.vue'),
+        meta: { title: '我的收藏' }
       }
     ]
   },

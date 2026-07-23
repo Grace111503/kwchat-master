@@ -103,6 +103,7 @@
             @forward="handleForwardMessage"
             @reply="handleReplyMessage"
             @delete="handleDeleteMessage"
+            @translate="handleTranslateMessage"
             @multi-select="handleMultiSelectFromAction"
             @click="(e) => handleMessageClick(message, e)"
           />
@@ -160,6 +161,7 @@
           @send-image="handleSendImage"
           @send-file="handleSendFile"
           @send-video="handleSendVideo"
+          @send-voice="handleSendVoice"
           @typing="handleTyping"
           @cancel-reply="cancelReply"
         />
@@ -167,6 +169,7 @@
         <AiFeatures
           ref="aiFeaturesRef"
           :conversation-id="chatStore.currentConversation?.id"
+          :recent-messages="recentTextMessages"
           @select-suggestion="handleSelectSuggestion"
         />
       </template>
@@ -249,6 +252,14 @@ const filteredMessages = computed(() => {
 // 显示的消息列表
 const displayMessages = computed(() => {
   return messageSearchKeyword.value ? filteredMessages.value : chatStore.messages
+})
+
+// 最近的文本消息（用于翻译选择）
+const recentTextMessages = computed(() => {
+  return chatStore.messages
+    .filter(msg => msg.messageType === 1 && msg.content)
+    .slice(-20)
+    .reverse()
 })
 
 const filteredConversations = computed(() => {
@@ -380,6 +391,41 @@ const handleSendVideo = async (file) => {
   } catch (error) {
     ElMessage.error('视频上传失败')
   }
+}
+
+const handleSendVoice = async (file) => {
+  if (!chatStore.currentConversation) return
+  try {
+    const res = await uploadFile(file)
+    if (res.code === 200) {
+      // 使用录音时长，如果有的话
+      const duration = file.recordingDuration || await getAudioDuration(file)
+      await chatStore.sendMessage(chatStore.currentConversation.id, 5, null, {
+        fileUrl: res.data.url,
+        fileName: res.data.originalFileName,
+        fileSize: res.data.fileSize,
+        fileType: res.data.fileType,
+        duration: duration
+      })
+      scrollToBottom()
+    }
+  } catch (error) {
+    ElMessage.error('语音发送失败')
+  }
+}
+
+// 获取音频时长
+const getAudioDuration = (file) => {
+  return new Promise((resolve) => {
+    const audio = new Audio()
+    audio.onloadedmetadata = () => {
+      resolve(Math.round(audio.duration))
+    }
+    audio.onerror = () => {
+      resolve(0)
+    }
+    audio.src = URL.createObjectURL(file)
+  })
 }
 
 let typingTimer = null
@@ -591,6 +637,96 @@ const handleDeleteMessage = (message) => {
   }
 }
 
+// 多选模式相关
+const toggleMultiSelectMode = () => {
+  isMultiSelectMode.value = !isMultiSelectMode.value
+  if (!isMultiSelectMode.value) {
+    selectedMessages.value = []
+  }
+}
+
+const handleMultiSelectMessage = (message) => {
+  if (!isMultiSelectMode.value) return
+
+  const index = selectedMessages.value.findIndex(m => m.id === message.id)
+  if (index === -1) {
+    selectedMessages.value.push(message)
+    ElMessage.success('已选择')
+  } else {
+    selectedMessages.value.splice(index, 1)
+    ElMessage.info('已取消选择')
+  }
+}
+
+const handleMultiSelectFromAction = (message) => {
+  isMultiSelectMode.value = true
+  selectedMessages.value = [message]
+  ElMessage.info('已进入多选模式，点击消息选择')
+}
+
+const batchDeleteMessages = async () => {
+  if (selectedMessages.value.length === 0) {
+    ElMessage.warning('请先选择消息')
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm(`确定要删除选中的 ${selectedMessages.value.length} 条消息吗？`, '批量删除', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+
+    // 逐个删除
+    for (const message of selectedMessages.value) {
+      const index = chatStore.messages.findIndex(m => m.id === message.id)
+      if (index !== -1) {
+        chatStore.messages.splice(index, 1)
+      }
+    }
+
+    ElMessage.success(`已删除 ${selectedMessages.value.length} 条消息`)
+    selectedMessages.value = []
+    isMultiSelectMode.value = false
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('删除失败')
+    }
+  }
+}
+
+const cancelMultiSelect = () => {
+  isMultiSelectMode.value = false
+  selectedMessages.value = []
+}
+
+const selectAllMessages = () => {
+  if (selectedMessages.value.length === chatStore.messages.length) {
+    selectedMessages.value = []
+  } else {
+    selectedMessages.value = [...chatStore.messages]
+  }
+}
+
+// 点击消息处理
+const handleMessageClick = (message, event) => {
+  // 如果点击的是操作菜单区域，不处理
+  if (event?.target?.closest('.message-actions') || event?.target?.closest('.action-trigger') || event?.target?.closest('.el-popover')) {
+    return
+  }
+
+  if (isMultiSelectMode.value) {
+    handleMultiSelectMessage(message)
+  } else if (message.messageType === 1 && message.content) {
+    aiFeaturesRef.value?.selectMessageForTranslate(message)
+  }
+}
+
+// 检查消息是否被选中
+const isMessageSelected = (message) => {
+  return selectedMessages.value.some(m => m.id === message.id)
+}
+
 const handleReplyMessage = (message) => {
   replyMessage.value = {
     ...message,
@@ -600,6 +736,12 @@ const handleReplyMessage = (message) => {
 
 const cancelReply = () => {
   replyMessage.value = null
+}
+
+// 翻译消息（从三点菜单触发）
+const handleTranslateMessage = (message) => {
+  // 直接打开翻译对话框并设置选中的消息
+  aiFeaturesRef.value?.translateDirectly(message)
 }
 
 const showConversationInfo = () => {
