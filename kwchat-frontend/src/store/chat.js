@@ -155,15 +155,25 @@ export const useChatStore = defineStore('chat', () => {
       if (currentConversation.value?.id !== message.conversationId) {
         conv.unreadCount = (conv.unreadCount || 0) + 1
       }
-      // 移到顶部
-      const index = conversations.value.indexOf(conv)
-      if (index > 0) {
-        conversations.value.splice(index, 1)
-        conversations.value.unshift(conv)
-      }
+      // 重新排序：置顶优先，然后按最后消息时间排序
+      conversations.value.sort((a, b) => {
+        // 置顶优先
+        if (a.isTop && !b.isTop) return -1
+        if (!a.isTop && b.isTop) return 1
+        // 然后按最后消息时间排序
+        return new Date(b.lastMessageTime || 0) - new Date(a.lastMessageTime || 0)
+      })
     } else {
       // 新会话
       conversations.value.unshift(message)
+      // 重新排序
+      conversations.value.sort((a, b) => {
+        // 置顶优先
+        if (a.isTop && !b.isTop) return -1
+        if (!a.isTop && b.isTop) return 1
+        // 然后按最后消息时间排序
+        return new Date(b.lastMessageTime || 0) - new Date(a.lastMessageTime || 0)
+      })
     }
   }
 
