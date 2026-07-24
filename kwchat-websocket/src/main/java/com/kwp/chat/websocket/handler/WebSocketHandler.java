@@ -5,6 +5,8 @@ import com.kwp.chat.common.model.WsMessage;
 import com.kwp.chat.common.model.WsSession;
 import com.kwp.chat.common.utils.JwtUtils;
 import com.kwp.chat.dao.ConversationMemberMapper;
+import com.kwp.chat.dao.UserMapper;
+import com.kwp.chat.model.user.User;
 import com.kwp.chat.websocket.manager.ChannelManager;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -14,8 +16,10 @@ import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -28,13 +32,15 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<WebSocketFrame
     private final JwtUtils jwtUtils;
     private final ObjectMapper objectMapper;
     private final ConversationMemberMapper conversationMemberMapper;
+    private final UserMapper userMapper;
 
     public WebSocketHandler(ChannelManager channelManager, JwtUtils jwtUtils, ObjectMapper objectMapper,
-                           ConversationMemberMapper conversationMemberMapper) {
+                           ConversationMemberMapper conversationMemberMapper, UserMapper userMapper) {
         this.channelManager = channelManager;
         this.jwtUtils = jwtUtils;
         this.objectMapper = objectMapper;
         this.conversationMemberMapper = conversationMemberMapper;
+        this.userMapper = userMapper;
     }
 
     @Override
@@ -248,6 +254,16 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<WebSocketFrame
         Long conversationId = message.getConversationId();
 
         try {
+            // 查询发送者信息，注入到消息 data 中
+            User sender = userMapper.selectById(senderId);
+            if (sender != null && message.getData() instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> data = (Map<String, Object>) message.getData();
+                data.put("senderId", senderId);
+                data.put("senderName", sender.getNickname());
+                data.put("senderAvatar", sender.getAvatar());
+            }
+
             String jsonMessage = objectMapper.writeValueAsString(message);
 
             if (receiverId != null) {

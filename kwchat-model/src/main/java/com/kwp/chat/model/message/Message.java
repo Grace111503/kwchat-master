@@ -109,4 +109,16 @@ public class Message extends BaseEntity {
      */
     @TableField("sequence")
     private Long sequence;
+
+    /**
+     * 发送者昵称（非数据库字段，由服务层填充）
+     */
+    @TableField(exist = false)
+    private String senderName;
+
+    /**
+     * 发送者头像（非数据库字段，由服务层填充）
+     */
+    @TableField(exist = false)
+    private String senderAvatar;
 }

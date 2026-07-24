@@ -41,14 +41,13 @@
           <VideoPlay />
         </el-icon>
       </el-tooltip>
-
-      <el-tooltip content="语音" placement="top">
+      <el-tooltip content="语音（长按录音）" placement="top">
         <el-icon
-          class="toolbar-btn"
-          :class="{ 'recording': isRecording }"
-          @mousedown="startVoiceRecord"
-          @mouseup="stopVoiceRecord"
-          @mouseleave="cancelVoiceRecord"
+            class="toolbar-btn"
+            :class="{ 'recording': isRecording }"
+            @mousedown="startVoiceRecord"
+            @mouseup="stopVoiceRecord"
+            @mouseleave="cancelVoiceRecord"
         >
           <Microphone />
         </el-icon>
@@ -75,17 +74,17 @@
 
     <!-- 输入框 -->
     <el-input
-      ref="inputRef"
-      v-model="messageContent"
-      type="textarea"
-      :rows="3"
-      placeholder="输入消息..."
-      resize="none"
-      @keydown.enter.exact.prevent="handleSend"
-      @keydown.enter.ctrl.except="handleNewLine"
-      @input="handleInput"
-      @focus="handleFocus"
-      @paste="handlePaste"
+        ref="inputRef"
+        v-model="messageContent"
+        type="textarea"
+        :rows="3"
+        placeholder="输入消息..."
+        resize="none"
+        @keydown.enter.exact.prevent="handleSend"
+        @keydown.enter.ctrl.except="handleNewLine"
+        @input="handleInput"
+        @focus="handleFocus"
+        @paste="handlePaste"
     />
 
     <!-- 底部 -->
@@ -132,6 +131,8 @@ const recordingTime = ref(0)
 let mediaRecorder = null
 let audioChunks = []
 let recordingTimer = null
+
+const isMobile = () => window.innerWidth <= 768
 
 const canSend = computed(() => messageContent.value.trim().length > 0 && !props.disabled)
 
@@ -187,162 +188,6 @@ const triggerImageUpload = () => { imageInputRef.value?.click() }
 const triggerFileUpload = () => { fileInputRef.value?.click() }
 const triggerVideoUpload = () => { videoInputRef.value?.click() }
 
-// 检测是否是移动设备
-const isMobile = () => {
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-}
-
-// 拍照
-const takePhoto = () => {
-  const input = document.createElement('input')
-  input.type = 'file'
-  input.accept = 'image/*'
-  if (isMobile()) {
-    input.capture = 'environment' // 手机使用后置摄像头
-  }
-  input.onchange = (e) => {
-    const file = e.target.files[0]
-    if (file) {
-      if (file.size > 10 * 1024 * 1024) {
-        ElMessage.error('图片大小不能超过10MB')
-        return
-      }
-      emit('send-image', file)
-    }
-  }
-  input.click()
-}
-
-// 录制视频
-const recordVideo = () => {
-  const input = document.createElement('input')
-  input.type = 'file'
-  input.accept = 'video/*'
-  if (isMobile()) {
-    input.capture = 'environment'
-  }
-  input.onchange = (e) => {
-    const file = e.target.files[0]
-    if (file) {
-      if (file.size > 50 * 1024 * 1024) {
-        ElMessage.error('视频大小不能超过50MB')
-        return
-      }
-      emit('send-video', file)
-    }
-  }
-  input.click()
-}
-
-// 开始录音
-const startVoiceRecord = async () => {
-  try {
-    // 检查浏览器支持
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      ElMessage.error('您的浏览器不支持录音功能')
-      return
-    }
-
-    if (typeof MediaRecorder === 'undefined') {
-      ElMessage.error('您的浏览器不支持录音功能')
-      return
-    }
-
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-
-    // 使用最兼容的格式
-    let mimeType = ''
-    if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-      mimeType = 'audio/webm;codecs=opus'
-    } else if (MediaRecorder.isTypeSupported('audio/webm')) {
-      mimeType = 'audio/webm'
-    } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
-      mimeType = 'audio/mp4'
-    }
-
-    console.log('使用录音格式:', mimeType || '默认')
-
-    mediaRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream)
-    audioChunks = []
-
-    mediaRecorder.ondataavailable = (e) => {
-      console.log('录音数据:', e.data.size, '字节')
-      if (e.data.size > 0) {
-        audioChunks.push(e.data)
-      }
-    }
-
-    mediaRecorder.onstop = () => {
-      const totalSize = audioChunks.reduce((sum, chunk) => sum + chunk.size, 0)
-      console.log('录音完成，总大小:', totalSize, '字节，时长:', recordingTime.value, '秒')
-
-      if (totalSize < 100) {
-        ElMessage.warning('录音数据过短，请长按麦克风录音')
-        stream.getTracks().forEach(track => track.stop())
-        return
-      }
-
-      const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' })
-      const file = new File([blob], `voice_${Date.now()}.webm`, { type: mediaRecorder.mimeType || 'audio/webm' })
-      // 将录音时长传递给父组件
-      file.recordingDuration = recordingTime.value
-      emit('send-voice', file)
-      stream.getTracks().forEach(track => track.stop())
-    }
-
-    // 不使用 timeslice，一次性收集所有数据
-    mediaRecorder.start()
-    isRecording.value = true
-    recordingTime.value = 0
-
-    // 计时
-    recordingTimer = setInterval(() => {
-      recordingTime.value++
-      if (recordingTime.value >= 60) {
-        stopVoiceRecord()
-      }
-    }, 1000)
-
-    ElMessage.success('开始录音，请长按说话')
-  } catch (error) {
-    console.error('录音启动失败:', error)
-    if (error.name === 'NotAllowedError') {
-      ElMessage.error('麦克风权限被拒绝，请在浏览器设置中允许访问麦克风')
-    } else if (error.name === 'NotFoundError') {
-      ElMessage.error('未找到麦克风设备')
-    } else {
-      ElMessage.error('录音启动失败: ' + error.message)
-    }
-  }
-}
-
-// 停止录音
-const stopVoiceRecord = () => {
-  if (mediaRecorder && mediaRecorder.state === 'recording') {
-    mediaRecorder.stop()
-  }
-  isRecording.value = false
-  if (recordingTimer) {
-    clearInterval(recordingTimer)
-    recordingTimer = null
-  }
-}
-
-// 取消录音
-const cancelVoiceRecord = () => {
-  if (isRecording.value) {
-    if (mediaRecorder && mediaRecorder.state === 'recording') {
-      mediaRecorder.stop()
-      audioChunks = [] // 清空数据，不发送
-    }
-    isRecording.value = false
-    if (recordingTimer) {
-      clearInterval(recordingTimer)
-      recordingTimer = null
-    }
-  }
-}
-
 const handleImageSelect = (event) => {
   const file = event.target.files[0]
   if (!file) return
@@ -394,6 +239,70 @@ const handlePaste = (event) => {
       break
     }
   }
+}
+
+// 开始录音
+const startVoiceRecord = async () => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' })
+    audioChunks = []
+
+    mediaRecorder.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        audioChunks.push(event.data)
+      }
+    }
+
+    mediaRecorder.onstop = () => {
+      const audioBlob = new Blob(audioChunks, { type: 'audio/webm' })
+      // 检查录音时长，太短的忽略
+      if (recordingTime.value < 1) {
+        ElMessage.warning('录音时间太短')
+        stream.getTracks().forEach(track => track.stop())
+        return
+      }
+      const audioFile = new File([audioBlob], `voice_${Date.now()}.webm`, { type: 'audio/webm' })
+      emit('send-voice', audioFile, recordingTime.value)
+      stream.getTracks().forEach(track => track.stop())
+    }
+
+    mediaRecorder.start()
+    isRecording.value = true
+    recordingTime.value = 0
+
+    // 计时
+    recordingTimer = setInterval(() => {
+      recordingTime.value++
+    }, 1000)
+  } catch (error) {
+    console.error('录音权限获取失败:', error)
+    ElMessage.error('无法访问麦克风，请检查浏览器权限设置')
+  }
+}
+
+// 停止录音
+const stopVoiceRecord = () => {
+  if (!mediaRecorder || mediaRecorder.state === 'inactive') return
+  mediaRecorder.stop()
+  isRecording.value = false
+  if (recordingTimer) {
+    clearInterval(recordingTimer)
+    recordingTimer = null
+  }
+}
+
+// 取消录音
+const cancelVoiceRecord = () => {
+  if (!mediaRecorder || mediaRecorder.state === 'inactive') return
+  mediaRecorder.stop()
+  audioChunks = []
+  isRecording.value = false
+  if (recordingTimer) {
+    clearInterval(recordingTimer)
+    recordingTimer = null
+  }
+  ElMessage.info('已取消录音')
 }
 
 watch(messageContent, (newVal) => {
@@ -474,13 +383,8 @@ defineExpose({
 
   &.recording {
     color: #f56c6c;
-    animation: pulse 1s infinite;
+    animation: pulse 1s ease-in-out infinite;
   }
-}
-
-@keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.2); }
 }
 
 .input-footer {
@@ -488,36 +392,6 @@ defineExpose({
   justify-content: space-between;
   align-items: center;
   padding: 6px 16px;
-}
-
-.recording-tip {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: #fff3f3;
-  border-top: 1px solid #fde2e2;
-  font-size: 13px;
-  color: #f56c6c;
-
-  .recording-dot {
-    width: 8px;
-    height: 8px;
-    background: #f56c6c;
-    border-radius: 50%;
-    animation: blink 1s infinite;
-  }
-
-  .tip {
-    margin-left: auto;
-    font-size: 12px;
-    color: #999;
-  }
-}
-
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
 }
 
 .input-tip {
@@ -540,5 +414,40 @@ defineExpose({
   &:hover {
     background: #1a6fe0;
   }
+}
+
+.recording-tip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #fef0f0;
+  border-top: 1px solid #fde2e2;
+  font-size: 13px;
+  color: #f56c6c;
+
+  .recording-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #f56c6c;
+    animation: blink 1s ease-in-out infinite;
+  }
+
+  .tip {
+    margin-left: auto;
+    font-size: 12px;
+    color: #999;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
 }
 </style>

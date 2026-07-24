@@ -17,10 +17,11 @@ public interface ConversationMapper extends BaseMapper<Conversation> {
     /**
      * 查询用户的会话列表
      */
-    @Select("SELECT c.* FROM chat_conversation c " +
+    @Select("SELECT c.id, c.conversation_type, c.name, c.avatar, c.last_message_id, " + "c.last_message_content, c.last_message_time, " + "c.member_count, c.creator_id, c.announcement, " + "cm.is_top, cm.do_not_disturb, " + "c.create_time, c.update_time, c.create_by, c.update_by, c.deleted " +
+            "FROM chat_conversation c " +
             "INNER JOIN chat_conversation_member cm ON c.id = cm.conversation_id " +
             "WHERE cm.user_id = #{userId} AND c.deleted = 0 AND cm.deleted = 0 " +
-            "ORDER BY c.last_message_time DESC")
+            "ORDER BY cm.is_top DESC, c.last_message_time DESC")
     List<Conversation> selectByUserId(@Param("userId") Long userId);
 
     /**

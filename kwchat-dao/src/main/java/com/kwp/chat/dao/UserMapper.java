@@ -6,6 +6,8 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
+import java.util.List;
+
 /**
  * 用户Mapper接口
  */
@@ -47,4 +49,15 @@ public interface UserMapper extends BaseMapper<User> {
      */
     @Select("SELECT COUNT(*) FROM sys_user WHERE email = #{email} AND deleted = 0")
     int countByEmail(@Param("email") String email);
+
+    /**
+     * 根据ID列表批量查询用户
+     */
+    @Select("<script>" +
+            "SELECT * FROM sys_user WHERE deleted = 0 AND id IN " +
+            "<foreach collection='ids' item='id' open='(' separator=',' close=')'>" +
+            "#{id}" +
+            "</foreach>" +
+            "</script>")
+    List<User> selectByIds(@Param("ids") List<Long> ids);
 }

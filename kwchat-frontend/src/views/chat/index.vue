@@ -4,10 +4,10 @@
     <div class="conversation-list" :class="{ 'mobile-hidden': chatStore.currentConversation }">
       <div class="conversation-header">
         <el-input
-          v-model="searchKeyword"
-          placeholder="搜索会话"
-          prefix-icon="Search"
-          clearable
+            v-model="searchKeyword"
+            placeholder="搜索会话"
+            prefix-icon="Search"
+            clearable
         />
       </div>
 
@@ -16,12 +16,12 @@
         <div v-if="pinnedConversations.length > 0" class="pinned-section">
           <div class="section-label">置顶会话</div>
           <ConversationItem
-            v-for="conversation in pinnedConversations"
-            :key="conversation.id"
-            :conversation="conversation"
-            :is-active="chatStore.currentConversation?.id === conversation.id"
-            @select="handleSelectConversation"
-            @delete="handleDeleteConversation"
+              v-for="conversation in pinnedConversations"
+              :key="conversation.id"
+              :conversation="conversation"
+              :is-active="chatStore.currentConversation?.id === conversation.id"
+              @select="handleSelectConversation"
+              @delete="handleDeleteConversation"
           />
         </div>
 
@@ -29,12 +29,12 @@
         <div v-if="unpinnedConversations.length > 0" class="unpinned-section">
           <div v-if="pinnedConversations.length > 0" class="section-label">最近会话</div>
           <ConversationItem
-            v-for="conversation in unpinnedConversations"
-            :key="conversation.id"
-            :conversation="conversation"
-            :is-active="chatStore.currentConversation?.id === conversation.id"
-            @select="handleSelectConversation"
-            @delete="handleDeleteConversation"
+              v-for="conversation in unpinnedConversations"
+              :key="conversation.id"
+              :conversation="conversation"
+              :is-active="chatStore.currentConversation?.id === conversation.id"
+              @select="handleSelectConversation"
+              @delete="handleDeleteConversation"
           />
         </div>
 
@@ -90,33 +90,32 @@
           </div>
 
           <MessageBubble
-            v-for="message in displayMessages"
-            :key="message.id"
-            :message="message"
-            :is-self="message.senderId === userInfo?.id"
-            :is-selected="isMultiSelectMode && isMessageSelected(message)"
-            @play-voice="handlePlayVoice"
-            @download="handleDownload"
-            @play-video="handlePlayVideo"
-            @click-avatar="handleAvatarClick"
-            @recall="handleRecallMessage"
-            @forward="handleForwardMessage"
-            @reply="handleReplyMessage"
-            @delete="handleDeleteMessage"
-            @translate="handleTranslateMessage"
-            @multi-select="handleMultiSelectFromAction"
-            @click="(e) => handleMessageClick(message, e)"
+              v-for="message in displayMessages"
+              :key="message.id"
+              :message="message"
+              :is-self="message.senderId === userInfo?.id"
+              :is-selected="isMultiSelectMode && isMessageSelected(message)"
+              @play-voice="handlePlayVoice"
+              @download="handleDownload"
+              @play-video="handlePlayVideo"
+              @click-avatar="handleAvatarClick"
+              @recall="handleRecallMessage"
+              @forward="handleForwardMessage"
+              @reply="handleReplyMessage"
+              @delete="handleDeleteMessage"
+              @multi-select="handleMultiSelectFromAction"
+              @click="(e) => handleMessageClick(message, e)"
           />
         </div>
 
         <!-- 消息搜索框 -->
         <div class="message-search" v-if="showMessageSearch">
           <el-input
-            v-model="messageSearchKeyword"
-            placeholder="搜索聊天记录..."
-            prefix-icon="Search"
-            clearable
-            size="small"
+              v-model="messageSearchKeyword"
+              placeholder="搜索聊天记录..."
+              prefix-icon="Search"
+              clearable
+              size="small"
           />
           <span class="search-count" v-if="messageSearchKeyword">
             {{ filteredMessages.length }} 条结果
@@ -152,25 +151,24 @@
 
         <!-- 输入区域 -->
         <ChatInput
-          ref="chatInputRef"
-          :disabled="false"
-          :is-group="isGroupChat"
-          :members="groupMembers"
-          :reply-message="replyMessage"
-          @send="handleSendText"
-          @send-image="handleSendImage"
-          @send-file="handleSendFile"
-          @send-video="handleSendVideo"
-          @send-voice="handleSendVoice"
-          @typing="handleTyping"
-          @cancel-reply="cancelReply"
+            ref="chatInputRef"
+            :disabled="false"
+            :is-group="isGroupChat"
+            :members="groupMembers"
+            :reply-message="replyMessage"
+            @send="handleSendText"
+            @send-image="handleSendImage"
+            @send-file="handleSendFile"
+            @send-video="handleSendVideo"
+            @send-voice="handleSendVoice"
+            @typing="handleTyping"
+            @cancel-reply="cancelReply"
         />
 
         <AiFeatures
-          ref="aiFeaturesRef"
-          :conversation-id="chatStore.currentConversation?.id"
-          :recent-messages="recentTextMessages"
-          @select-suggestion="handleSelectSuggestion"
+            ref="aiFeaturesRef"
+            :conversation-id="chatStore.currentConversation?.id"
+            @select-suggestion="handleSelectSuggestion"
         />
       </template>
 
@@ -186,16 +184,61 @@
 
     <!-- 群信息面板 -->
     <GroupInfoPanel
-      v-if="chatStore.currentConversation?.conversationType === 2"
-      v-model:visible="groupInfoVisible"
-      :conversation-id="chatStore.currentConversation?.id"
+        v-if="chatStore.currentConversation?.conversationType === 2"
+        v-model:visible="groupInfoVisible"
+        :conversation-id="chatStore.currentConversation?.id"
     />
 
     <!-- 用户信息面板 -->
     <UserProfile
-      v-model:visible="userProfileVisible"
-      :user="selectedUser"
+        v-model:visible="userProfileVisible"
+        :user="selectedUser"
     />
+
+    <!-- 批量转发对话框 -->
+    <el-dialog
+        v-model="showBatchForward"
+        title="转发消息"
+        width="400px"
+    >
+      <div class="forward-content">
+        <div class="forward-preview">
+          <div class="preview-label">消息内容：</div>
+          <div class="preview-text">已选择 {{ selectedMessages.length }} 条消息</div>
+        </div>
+
+        <div class="forward-target">
+          <div class="target-label">转发给：</div>
+          <el-select
+              v-model="forwardTarget"
+              filterable
+              placeholder="选择会话"
+              style="width: 100%"
+          >
+            <el-option
+                v-for="conversation in chatStore.conversations"
+                :key="conversation.id"
+                :label="conversation.name"
+                :value="conversation.id"
+            >
+              <div class="conversation-option">
+                <el-avatar :size="24" :src="conversation.avatar">
+                  {{ getAvatarFallback(conversation.name) }}
+                </el-avatar>
+                <span>{{ conversation.name }}</span>
+              </div>
+            </el-option>
+          </el-select>
+        </div>
+      </div>
+
+      <template #footer>
+        <el-button @click="showBatchForward = false">取消</el-button>
+        <el-button type="primary" @click="confirmBatchForward" :disabled="!forwardTarget">
+          转发
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -204,7 +247,7 @@ import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useUserStore } from '@/store/user'
 import { useChatStore } from '@/store/chat'
 import { ElMessage } from 'element-plus'
-import { uploadImage, uploadFile, uploadVideo } from '@/api/file'
+import { uploadImage, uploadFile, uploadVideo, uploadVoice } from '@/api/file'
 import { getConversationMembers } from '@/api/conversation'
 import { recallMessage, deleteMessage } from '@/api/message'
 import websocketManager from '@/utils/websocket'
@@ -218,6 +261,12 @@ import UserProfile from '@/components/chat/UserProfile.vue'
 const userStore = useUserStore()
 const chatStore = useChatStore()
 const userInfo = computed(() => userStore.userInfo)
+
+// 获取头像 fallback 文字（显示最后两个字）
+const getAvatarFallback = (name) => {
+  if (!name) return '会话'
+  return name.length >= 2 ? name.slice(-2) : name
+}
 
 const searchKeyword = ref('')
 const messageSearchKeyword = ref('')
@@ -235,6 +284,8 @@ const replyMessage = ref(null)
 // 多选模式
 const isMultiSelectMode = ref(false)
 const selectedMessages = ref([])
+const showBatchForward = ref(false)
+const forwardTarget = ref(null)
 
 // 是否为群聊
 const isGroupChat = computed(() => chatStore.currentConversation?.conversationType === 2)
@@ -244,8 +295,8 @@ const filteredMessages = computed(() => {
   if (!messageSearchKeyword.value) return chatStore.messages
   const keyword = messageSearchKeyword.value.toLowerCase()
   return chatStore.messages.filter(msg =>
-    msg.content?.toLowerCase().includes(keyword) ||
-    msg.fileName?.toLowerCase().includes(keyword)
+      msg.content?.toLowerCase().includes(keyword) ||
+      msg.fileName?.toLowerCase().includes(keyword)
   )
 })
 
@@ -254,18 +305,10 @@ const displayMessages = computed(() => {
   return messageSearchKeyword.value ? filteredMessages.value : chatStore.messages
 })
 
-// 最近的文本消息（用于翻译选择）
-const recentTextMessages = computed(() => {
-  return chatStore.messages
-    .filter(msg => msg.messageType === 1 && msg.content)
-    .slice(-20)
-    .reverse()
-})
-
 const filteredConversations = computed(() => {
   if (!searchKeyword.value) return chatStore.conversations
   return chatStore.conversations.filter(item =>
-    item.name?.includes(searchKeyword.value)
+      item.name?.includes(searchKeyword.value)
   )
 })
 
@@ -393,13 +436,11 @@ const handleSendVideo = async (file) => {
   }
 }
 
-const handleSendVoice = async (file) => {
+const handleSendVoice = async (file, duration) => {
   if (!chatStore.currentConversation) return
   try {
-    const res = await uploadFile(file)
+    const res = await uploadVoice(file)
     if (res.code === 200) {
-      // 使用录音时长，如果有的话
-      const duration = file.recordingDuration || await getAudioDuration(file)
       await chatStore.sendMessage(chatStore.currentConversation.id, 5, null, {
         fileUrl: res.data.url,
         fileName: res.data.originalFileName,
@@ -414,27 +455,13 @@ const handleSendVoice = async (file) => {
   }
 }
 
-// 获取音频时长
-const getAudioDuration = (file) => {
-  return new Promise((resolve) => {
-    const audio = new Audio()
-    audio.onloadedmetadata = () => {
-      resolve(Math.round(audio.duration))
-    }
-    audio.onerror = () => {
-      resolve(0)
-    }
-    audio.src = URL.createObjectURL(file)
-  })
-}
-
 let typingTimer = null
 const handleTyping = () => {
   if (!chatStore.currentConversation) return
   // 发送正在输入事件
   websocketManager.sendTyping(
-    chatStore.currentConversation.id,
-    chatStore.currentConversation.targetUserId
+      chatStore.currentConversation.id,
+      chatStore.currentConversation.targetUserId
   )
 }
 
@@ -546,7 +573,39 @@ const batchForwardMessages = () => {
     ElMessage.warning('请先选择消息')
     return
   }
-  ElMessage.info('转发功能开发中')
+  forwardTarget.value = null
+  showBatchForward.value = true
+}
+
+const confirmBatchForward = async () => {
+  if (!forwardTarget.value || selectedMessages.value.length === 0) return
+
+  let successCount = 0
+  for (const message of selectedMessages.value) {
+    try {
+      await chatStore.sendMessage(
+          forwardTarget.value,
+          message.messageType,
+          message.content,
+          {
+            fileUrl: message.fileUrl,
+            fileName: message.fileName,
+            fileSize: message.fileSize,
+            fileType: message.fileType,
+            isForward: true,
+            originalMessageId: message.id
+          }
+      )
+      successCount++
+    } catch (e) {
+      console.error('转发失败:', e)
+    }
+  }
+
+  showBatchForward.value = false
+  forwardTarget.value = null
+  ElMessage.success(`已转发 ${successCount} 条消息`)
+  cancelMultiSelect()
 }
 
 const batchFavoriteMessages = async () => {
@@ -646,12 +705,6 @@ const handleReplyMessage = (message) => {
 
 const cancelReply = () => {
   replyMessage.value = null
-}
-
-// 翻译消息（从三点菜单触发）
-const handleTranslateMessage = (message) => {
-  // 直接打开翻译对话框并设置选中的消息
-  aiFeaturesRef.value?.translateDirectly(message)
 }
 
 const showConversationInfo = () => {
@@ -1031,5 +1084,40 @@ onUnmounted(() => {
       }
     }
   }
+}
+
+// 转发对话框
+.forward-content {
+  .forward-preview {
+    margin-bottom: 16px;
+
+    .preview-label {
+      font-size: 12px;
+      color: #999;
+      margin-bottom: 4px;
+    }
+
+    .preview-text {
+      padding: 8px 12px;
+      background: #f5f7fa;
+      border-radius: 4px;
+      font-size: 14px;
+      color: #333;
+    }
+  }
+
+  .forward-target {
+    .target-label {
+      font-size: 12px;
+      color: #999;
+      margin-bottom: 4px;
+    }
+  }
+}
+
+.conversation-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 </style>

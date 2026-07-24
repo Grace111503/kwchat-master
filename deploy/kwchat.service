@@ -1,0 +1,16 @@
+[Unit]
+Description=KWChat Backend
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/kwchat
+ExecStart=/usr/lib/jvm/java-17-openjdk/bin/java -Xms256m -Xmx512m -XX:+UseG1GC -jar /opt/kwchat/kwchat-app/target/kwchat-app-1.0.0-SNAPSHOT.jar
+Restart=always
+RestartSec=10
+StandardOutput=append:/opt/kwchat/logs/kwchat.log
+StandardError=append:/opt/kwchat/logs/kwchat.log
+
+[Install]
+WantedBy=multi-user.target
