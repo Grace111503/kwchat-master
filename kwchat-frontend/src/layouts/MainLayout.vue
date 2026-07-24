@@ -29,6 +29,15 @@
       </div>
 
       <div class="sidebar-footer">
+        <div class="menu-item" @click="toggleDarkMode">
+          <div class="menu-icon-wrapper">
+            <el-icon :size="20">
+              <Sunny v-if="isDarkMode" />
+              <Moon v-else />
+            </el-icon>
+          </div>
+          <span class="menu-label">{{ isDarkMode ? '浅色' : '深色' }}</span>
+        </div>
         <div class="menu-item" @click="handleLogout">
           <div class="menu-icon-wrapper">
             <el-icon :size="20">
@@ -62,6 +71,16 @@
         </div>
         <span class="nav-label">{{ item.label }}</span>
       </div>
+      <!-- 深色模式切换按钮 -->
+      <div class="bottom-nav-item dark-mode-toggle" @click="toggleDarkMode">
+        <div class="nav-icon-wrapper">
+          <el-icon :size="22">
+            <Sunny v-if="isDarkMode" />
+            <Moon v-else />
+          </el-icon>
+        </div>
+        <span class="nav-label">{{ isDarkMode ? '浅色' : '深色' }}</span>
+      </div>
     </div>
   </div>
 </template>
@@ -71,12 +90,15 @@ import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/store/user'
 import { useChatStore } from '@/store/chat'
+import { useDarkMode } from '@/composables/useDarkMode'
 import { ElMessageBox } from 'element-plus'
+import { Sunny, Moon } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
 const chatStore = useChatStore()
+const { isDarkMode, toggleDarkMode } = useDarkMode()
 
 const userInfo = computed(() => userStore.userInfo)
 
@@ -141,18 +163,18 @@ const handleLogout = () => {
 .main-layout {
   display: flex;
   height: 100vh;
-  background: #f0f2f5;
+  background: var(--bg-secondary);
 }
 
 .sidebar {
   width: 72px;
-  background: #f0f2f5;
+  background: var(--bg-secondary);
   display: flex;
   flex-direction: column;
   align-items: center;
   padding: 16px 0;
   user-select: none;
-  border-right: 1px solid #e5e5e5;
+  border-right: 1px solid var(--border-color);
 }
 
 .sidebar-header {
@@ -188,7 +210,7 @@ const handleLogout = () => {
   width: 56px;
   height: 56px;
   cursor: pointer;
-  color: #86909c;
+  color: var(--text-secondary);
   transition: all 0.15s;
   position: relative;
 
@@ -198,7 +220,7 @@ const handleLogout = () => {
 
   &.active {
     color: #2b7fff;
-    background: #e8f0fe;
+    background: var(--bg-hover);
   }
 }
 
@@ -242,8 +264,8 @@ const handleLogout = () => {
   left: 0;
   right: 0;
   height: 56px;
-  background: #fff;
-  border-top: 1px solid #e5e5e5;
+  background: var(--bg-primary);
+  border-top: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   justify-content: space-around;
@@ -258,7 +280,7 @@ const handleLogout = () => {
   flex: 1;
   height: 100%;
   cursor: pointer;
-  color: #86909c;
+  color: var(--text-secondary);
   transition: color 0.15s;
 
   &:active {
@@ -267,6 +289,10 @@ const handleLogout = () => {
 
   &.active {
     color: #2b7fff;
+  }
+
+  &.dark-mode-toggle {
+    border-left: 1px solid var(--border-color);
   }
 }
 

@@ -361,11 +361,11 @@ const getReplyPreviewText = () => {
   transition: background 0.15s;
 
   &:hover {
-    background: rgba(0, 0, 0, 0.02);
+    background: var(--bg-hover);
   }
 
   &.is-selected {
-    background: #e8f0fe;
+    background: var(--bg-secondary);
 
     .message-bubble {
       border-color: #2b7fff;
@@ -386,12 +386,17 @@ const getReplyPreviewText = () => {
     }
 
     .message-bubble {
-      background: #d1eaff;
-      border-color: #bae0ff;
+      background: #2b7fff;
+      color: #fff;
+      border-color: #2b7fff;
     }
 
     .message-meta {
       flex-direction: row-reverse;
+
+      .message-time {
+        color: var(--text-placeholder);
+      }
     }
   }
 }
@@ -416,7 +421,7 @@ const getReplyPreviewText = () => {
 }
 
 .reply-preview {
-  background: #f5f7fa;
+  background: var(--bg-secondary);
   border-left: 3px solid #2b7fff;
   padding: 6px 10px;
   margin-bottom: 6px;
@@ -424,7 +429,7 @@ const getReplyPreviewText = () => {
 
   .reply-content {
     font-size: 12px;
-    color: #999;
+    color: var(--text-placeholder);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -437,15 +442,15 @@ const getReplyPreviewText = () => {
 
 .message-sender {
   font-size: 12px;
-  color: #999;
+  color: var(--text-placeholder);
   margin-bottom: 3px;
 }
 
 .message-bubble {
-  background: #fff;
+  background: var(--bg-primary);
   padding: 8px 12px;
   word-break: break-word;
-  border: 1px solid #e5e5e5;
+  border: 1px solid var(--border-color);
 
   &.bubble-image {
     padding: 2px;
@@ -460,28 +465,28 @@ const getReplyPreviewText = () => {
   }
 
   &.bubble-system {
-    background: #f5f5f5;
+    background: var(--bg-secondary);
     border: none;
     text-align: center;
     font-size: 12px;
-    color: #999;
+    color: var(--text-placeholder);
   }
 
   &.bubble-recalled {
-    background: #f5f5f5;
+    background: var(--bg-secondary);
     border: none;
     display: flex;
     align-items: center;
     gap: 4px;
     font-size: 12px;
-    color: #999;
+    color: var(--text-placeholder);
   }
 }
 
 .message-text {
   font-size: 14px;
   line-height: 1.6;
-  color: #1a1a1a;
+  color: var(--text-primary);
 
   :deep(a) {
     color: #2b7fff;
@@ -513,8 +518,8 @@ const getReplyPreviewText = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f5f5f5;
-  color: #999;
+  background: var(--bg-secondary);
+  color: var(--text-placeholder);
 }
 
 .message-file {
@@ -525,7 +530,7 @@ const getReplyPreviewText = () => {
   min-width: 180px;
 
   &:hover {
-    background: rgba(0, 0, 0, 0.02);
+    background: var(--bg-hover);
   }
 }
 
@@ -540,13 +545,13 @@ const getReplyPreviewText = () => {
 
 .file-name {
   font-size: 13px;
-  color: #333;
+  color: var(--text-primary);
   margin-bottom: 2px;
 }
 
 .file-size {
   font-size: 11px;
-  color: #999;
+  color: var(--text-placeholder);
 }
 
 .message-video-wrapper {
@@ -568,12 +573,12 @@ const getReplyPreviewText = () => {
   padding: 8px 12px;
   min-width: 100px;
   cursor: pointer;
-  background: #f0f9ff;
+  background: var(--bg-secondary);
   border-radius: 16px;
   transition: background 0.2s;
 
   &:hover {
-    background: #e0f2fe;
+    background: var(--bg-hover);
   }
 
   .el-icon.playing {
@@ -582,13 +587,13 @@ const getReplyPreviewText = () => {
 
   .voice-duration {
     font-size: 13px;
-    color: #333;
+    color: var(--text-primary);
   }
 }
 
 .voice-duration {
   font-size: 13px;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .voice-wave {
@@ -641,7 +646,7 @@ const getReplyPreviewText = () => {
 
 .message-time {
   font-size: 11px;
-  color: #bbb;
+  color: var(--text-placeholder);
 }
 
 .message-status {

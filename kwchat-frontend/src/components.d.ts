@@ -46,6 +46,7 @@ declare module 'vue' {
     MessageActions: typeof import('./components/chat/MessageActions.vue')['default']
     MessageBubble: typeof import('./components/chat/MessageBubble.vue')['default']
     NotificationAlert: typeof import('./components/chat/NotificationAlert.vue')['default']
+    OfflineNotification: typeof import('./components/common/OfflineNotification.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     UserProfile: typeof import('./components/chat/UserProfile.vue')['default']

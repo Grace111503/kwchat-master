@@ -845,16 +845,17 @@ onUnmounted(() => {
 .forward-dialog-content {
   .forward-preview {
     padding: 12px;
-    background: #f5f7fa;
+    background: var(--bg-secondary);
     border-radius: 4px;
     margin-bottom: 16px;
-    color: #666;
+    color: var(--text-secondary);
   }
 
   .forward-target {
     .target-label {
       margin-bottom: 8px;
       font-weight: 500;
+      color: var(--text-primary);
     }
   }
 }
@@ -862,25 +863,25 @@ onUnmounted(() => {
 .chat-container {
   display: flex;
   height: 100%;
-  background: #fff;
+  background: var(--bg-primary);
 }
 
 .conversation-list {
   width: 300px;
-  border-right: 1px solid #e5e5e5;
+  border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
-  background: #fafafa;
+  background: var(--bg-secondary);
 }
 
 .conversation-header {
   padding: 12px;
-  border-bottom: 1px solid #e5e5e5;
+  border-bottom: 1px solid var(--border-color);
 
   :deep(.el-input__wrapper) {
-    box-shadow: 0 0 0 1px #e0e0e0 inset;
+    box-shadow: 0 0 0 1px var(--border-color) inset;
     border-radius: 0;
-    background: #fff;
+    background: var(--bg-primary);
 
     &.is-focus {
       box-shadow: 0 0 0 1px #2b7fff inset;
@@ -895,21 +896,21 @@ onUnmounted(() => {
 
 .section-label {
   font-size: 12px;
-  color: #999;
+  color: var(--text-placeholder);
   padding: 8px 12px 4px;
-  background: #f5f5f5;
-  border-bottom: 1px solid #eee;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .pinned-section {
-  background: #fafafa;
-  border-bottom: 8px solid #f0f0f0;
+  background: var(--bg-secondary);
+  border-bottom: 8px solid var(--bg-secondary);
 }
 
 .empty-tip {
   padding: 60px 0;
   text-align: center;
-  color: #bbb;
+  color: var(--text-placeholder);
   font-size: 13px;
 }
 
@@ -925,8 +926,8 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid #e5e5e5;
-  background: #fff;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-primary);
 }
 
 .chat-title {
@@ -936,12 +937,12 @@ onUnmounted(() => {
   .name {
     font-size: 15px;
     font-weight: 600;
-    color: #1a1a1a;
+    color: var(--text-primary);
   }
 
   .member-count {
     font-size: 13px;
-    color: #999;
+    color: var(--text-placeholder);
     margin-left: 6px;
   }
 }
@@ -953,7 +954,7 @@ onUnmounted(() => {
 
 .action-btn {
   font-size: 18px;
-  color: #999;
+  color: var(--text-placeholder);
   cursor: pointer;
   transition: color 0.15s;
 
@@ -966,7 +967,7 @@ onUnmounted(() => {
   flex: 1;
   overflow-y: auto;
   padding: 16px 0;
-  background: #f5f5f5;
+  background: var(--bg-secondary);
 }
 
 .loading-tip,
@@ -974,7 +975,7 @@ onUnmounted(() => {
   text-align: center;
   padding: 12px;
   font-size: 12px;
-  color: #bbb;
+  color: var(--text-placeholder);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -987,8 +988,8 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: #f5f5f5;
-  color: #ccc;
+  background: var(--bg-secondary);
+  color: var(--text-placeholder);
 
   .empty-icon {
     margin-bottom: 16px;
@@ -1001,12 +1002,12 @@ onUnmounted(() => {
 
 .typing-indicator {
   padding: 4px 16px;
-  background: #fff;
-  border-top: 1px solid #f0f0f0;
+  background: var(--bg-primary);
+  border-top: 1px solid var(--border-color);
 
   span {
     font-size: 12px;
-    color: #999;
+    color: var(--text-placeholder);
   }
 }
 
@@ -1015,8 +1016,8 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 8px 16px;
-  background: #e8f0fe;
-  border-top: 1px solid #d0e0f5;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
 
   .toolbar-left {
     display: flex;
@@ -1036,7 +1037,7 @@ onUnmounted(() => {
 
   .selected-count {
     font-size: 13px;
-    color: #333;
+    color: var(--text-primary);
   }
 
   .toolbar-actions {
@@ -1050,7 +1051,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 12px;
   padding: 8px 16px;
-  background: #fff;
+  background: var(--bg-primary);
   border-top: 1px solid #f0f0f0;
 
   :deep(.el-input__wrapper) {

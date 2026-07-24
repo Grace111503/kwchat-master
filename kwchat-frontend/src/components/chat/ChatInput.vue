@@ -439,8 +439,8 @@ defineExpose({
 
 <style lang="scss" scoped>
 .chat-input {
-  border-top: 1px solid #e5e5e5;
-  background: #fff;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-primary);
   position: relative;
 }
 
@@ -449,8 +449,8 @@ defineExpose({
   align-items: center;
   justify-content: space-between;
   padding: 6px 16px;
-  background: #f5f5f5;
-  border-bottom: 1px solid #e5e5e5;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
 
   .reply-content {
     flex: 1;
@@ -463,7 +463,7 @@ defineExpose({
 
     .reply-text {
       font-size: 12px;
-      color: #666;
+      color: var(--text-secondary);
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -472,11 +472,11 @@ defineExpose({
 
   .reply-close {
     cursor: pointer;
-    color: #999;
+    color: var(--text-placeholder);
     margin-left: 8px;
 
     &:hover {
-      color: #333;
+      color: var(--text-primary);
     }
   }
 }
@@ -489,7 +489,7 @@ defineExpose({
 
 .toolbar-btn {
   font-size: 18px;
-  color: #999;
+  color: var(--text-placeholder);
   cursor: pointer;
   transition: color 0.15s;
 
@@ -520,8 +520,8 @@ defineExpose({
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  background: #fff3f3;
-  border-top: 1px solid #fde2e2;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
   font-size: 13px;
   color: #f56c6c;
 
@@ -536,7 +536,7 @@ defineExpose({
   .tip {
     margin-left: auto;
     font-size: 12px;
-    color: #999;
+    color: var(--text-placeholder);
   }
 }
 
@@ -547,7 +547,7 @@ defineExpose({
 
 .input-tip {
   font-size: 12px;
-  color: #ccc;
+  color: var(--text-placeholder);
 }
 
 :deep(.el-textarea__inner) {
@@ -555,6 +555,12 @@ defineExpose({
   box-shadow: none;
   padding: 0 16px;
   border-radius: 0;
+  background: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+
+  &::placeholder {
+    color: var(--text-placeholder) !important;
+  }
 }
 
 :deep(.el-button--primary) {

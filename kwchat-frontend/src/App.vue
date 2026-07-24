@@ -1,4 +1,5 @@
 <template>
+  <OfflineNotification />
   <router-view />
 </template>
 
@@ -6,6 +7,7 @@
 import { onMounted, onUnmounted, watch } from 'vue'
 import { useUserStore } from '@/store/user'
 import { useChatStore } from '@/store/chat'
+import OfflineNotification from '@/components/common/OfflineNotification.vue'
 
 const userStore = useUserStore()
 const chatStore = useChatStore()

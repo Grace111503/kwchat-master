@@ -351,24 +351,28 @@ const formatTime = (time) => {
   padding: 10px 12px;
   cursor: pointer;
   transition: transform 0.2s, background 0.1s;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--border-color);
   position: relative;
-  background: #fff;
+  background: var(--bg-primary);
 
   &:hover {
-    background: #f0f0f0;
+    background: var(--bg-hover);
   }
 
   &.is-pinned {
-    background: #f5f7fa;
+    background: var(--bg-secondary);
 
     &:hover {
-      background: #ecf0f5;
+      background: var(--bg-hover);
     }
   }
 
   &.active {
     background: #e8f0fe;
+
+    .dark & {
+      background: #1a3a5c;
+    }
   }
 
   &.swiped {
@@ -438,10 +442,13 @@ const formatTime = (time) => {
   width: 8px;
   height: 8px;
   background: #00b42a;
-  border: 2px solid #fff;
+  border: 2px solid var(--bg-primary);
 }
 
 .context-menu {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+
   .menu-item {
     padding: 8px 12px;
     cursor: pointer;
@@ -449,12 +456,12 @@ const formatTime = (time) => {
     transition: background 0.15s;
 
     &:hover {
-      background: #f5f5f5;
+      background: var(--bg-hover);
     }
 
     span {
       font-size: 13px;
-      color: #333;
+      color: var(--text-primary);
     }
 
     &.danger {
@@ -485,13 +492,13 @@ const formatTime = (time) => {
 .conversation-name {
   font-size: 14px;
   font-weight: 500;
-  color: #1a1a1a;
+  color: var(--text-primary);
   flex: 1;
 }
 
 .conversation-time {
   font-size: 11px;
-  color: #bbb;
+  color: var(--text-placeholder);
   flex-shrink: 0;
   margin-left: 8px;
 }
@@ -504,7 +511,7 @@ const formatTime = (time) => {
 
 .last-message {
   font-size: 12px;
-  color: #999;
+  color: var(--text-secondary);
   flex: 1;
 }
 
