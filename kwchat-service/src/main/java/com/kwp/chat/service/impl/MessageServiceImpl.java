@@ -6,11 +6,9 @@ import com.kwp.chat.common.result.ResultCode;
 import com.kwp.chat.dao.ConversationMemberMapper;
 import com.kwp.chat.dao.MessageMapper;
 import com.kwp.chat.dao.MessageReadMapper;
-import com.kwp.chat.dao.UserMapper;
 import com.kwp.chat.model.message.ConversationMember;
 import com.kwp.chat.model.message.Message;
 import com.kwp.chat.model.message.MessageRead;
-import com.kwp.chat.model.user.User;
 import com.kwp.chat.service.ConversationService;
 import com.kwp.chat.service.MessageService;
 import lombok.RequiredArgsConstructor;
@@ -20,8 +18,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * 消息服务实现类
@@ -35,7 +31,6 @@ public class MessageServiceImpl implements MessageService {
     private final MessageReadMapper messageReadMapper;
     private final ConversationMemberMapper conversationMemberMapper;
     private final ConversationService conversationService;
-    private final UserMapper userMapper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -86,9 +81,6 @@ public class MessageServiceImpl implements MessageService {
 
         log.info("消息发送成功: conversationId={}, senderId={}, messageId={}", conversationId, senderId, message.getId());
 
-        // 填充发送者信息
-        enrichMessagesWithSenderInfo(List.of(message));
-
         return message;
     }
 
@@ -101,12 +93,7 @@ public class MessageServiceImpl implements MessageService {
         }
 
         int offset = (page - 1) * size;
-        List<Message> messages = messageMapper.selectByConversationId(conversationId, size, offset);
-
-        // 用 senderId 批量查询发送者信息
-        enrichMessagesWithSenderInfo(messages);
-
-        return messages;
+        return messageMapper.selectByConversationId(conversationId, size, offset);
     }
 
     @Override
@@ -252,32 +239,6 @@ public class MessageServiceImpl implements MessageService {
             return content;
         } else {
             return content;
-        }
-    }
-
-    /**
-     * 批量填充消息的发送者昵称和头像
-     */
-    private void enrichMessagesWithSenderInfo(List<Message> messages) {
-        if (messages == null || messages.isEmpty()) return;
-
-        List<Long> senderIds = messages.stream()
-                .map(Message::getSenderId)
-                .distinct()
-                .collect(Collectors.toList());
-
-        if (senderIds.isEmpty()) return;
-
-        List<User> users = userMapper.selectByIds(senderIds);
-        Map<Long, User> userMap = users.stream()
-                .collect(Collectors.toMap(User::getId, u -> u));
-
-        for (Message message : messages) {
-            User user = userMap.get(message.getSenderId());
-            if (user != null) {
-                message.setSenderName(user.getNickname());
-                message.setSenderAvatar(user.getAvatar());
-            }
         }
     }
 }

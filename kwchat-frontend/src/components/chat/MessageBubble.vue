@@ -1,13 +1,13 @@
 <template>
   <div class="message-bubble-wrapper" :class="{ 'is-self': isSelf, 'is-selected': isSelected }">
     <el-avatar
-        :size="34"
-        :src="message.senderAvatar"
-        shape="circle"
-        class="message-avatar"
-        :class="{ 'clickable': !isSelf }"
-        :style="!message.senderAvatar ? getAvatarStyle(message.senderName) : {}"
-        @click="handleAvatarClick"
+      :size="34"
+      :src="message.senderAvatar"
+      shape="circle"
+      class="message-avatar"
+      :class="{ 'clickable': !isSelf }"
+      :style="!message.senderAvatar ? getAvatarStyle(message.senderName) : {}"
+      @click="handleAvatarClick"
     >
       {{ getAvatarFallback(message.senderName) }}
     </el-avatar>
@@ -32,10 +32,10 @@
         <!-- 图片消息 -->
         <template v-else-if="message.messageType === 2">
           <el-image
-              :src="message.fileUrl"
-              :preview-src-list="[message.fileUrl]"
-              class="message-image"
-              fit="cover"
+            :src="message.fileUrl"
+            :preview-src-list="[message.fileUrl]"
+            class="message-image"
+            fit="cover"
           >
             <template #error>
               <div class="image-error">
@@ -62,11 +62,11 @@
         <template v-else-if="message.messageType === 4">
           <div class="message-video-wrapper">
             <video
-                :src="message.fileUrl"
-                class="message-video"
-                controls
-                preload="metadata"
-                playsinline
+              :src="message.fileUrl"
+              class="message-video"
+              controls
+              preload="metadata"
+              playsinline
             />
           </div>
         </template>
@@ -110,14 +110,15 @@
 
     <!-- 消息操作菜单 -->
     <MessageActions
-        v-if="message.messageType !== 6"
-        :message="message"
-        :is-self="isSelf"
-        @recall="handleRecall"
-        @forward="handleForward"
-        @reply="handleReply"
-        @delete="handleDeleteMessage"
-        @multi-select="handleMultiSelect"
+      v-if="message.messageType !== 6"
+      :message="message"
+      :is-self="isSelf"
+      @recall="handleRecall"
+      @forward="handleForward"
+      @reply="handleReply"
+      @delete="handleDeleteMessage"
+      @multi-select="handleMultiSelect"
+      @translate="handleTranslateMessage"
     />
   </div>
 </template>
@@ -138,7 +139,7 @@ const props = defineProps({
   isSelected: { type: Boolean, default: false }
 })
 
-const emit = defineEmits(['play-voice', 'download', 'play-video', 'click-avatar', 'recall', 'forward', 'reply', 'delete', 'multi-select'])
+const emit = defineEmits(['play-voice', 'download', 'play-video', 'click-avatar', 'recall', 'forward', 'reply', 'delete', 'translate','multi-select'])
 const isPlaying = ref(false)
 
 // 获取头像 fallback 文字（显示最后两个字）
@@ -214,28 +215,71 @@ const formatFileSize = (size) => {
 }
 
 let audio = null
-const playVoice = () => {
+const playVoice = async () => {
   if (!props.message.fileUrl) {
     ElMessage.error('语音文件不存在')
     return
   }
 
+  // 停止当前播放
   if (isPlaying.value && audio) {
     audio.pause()
+    audio.currentTime = 0
     isPlaying.value = false
     return
   }
 
-  audio = new Audio(props.message.fileUrl)
-  audio.onended = () => {
+  console.log('尝试播放语音:', props.message.fileUrl)
+
+  try {
+    // 获取音频文件并创建 blob URL
+    const response = await fetch(props.message.fileUrl)
+    console.log('响应状态:', response.status, response.headers.get('content-type'))
+
+    if (!response.ok) throw new Error('文件获取失败: ' + response.status)
+
+    const blob = await response.blob()
+    console.log('文件大小:', blob.size, '类型:', blob.type)
+
+    // 检查文件大小（太小可能是空文件或损坏）
+    if (blob.size < 100) {
+      ElMessage.error('语音文件无效（文件过小）')
+      return
+    }
+
+    // 创建 blob URL
+    const blobUrl = URL.createObjectURL(blob)
+    console.log('Blob URL:', blobUrl)
+
+    audio = new Audio(blobUrl)
+
+    // 设置音频类型
+    audio.type = blob.type || 'audio/webm'
+
+    audio.onended = () => {
+      isPlaying.value = false
+      URL.revokeObjectURL(blobUrl)
+    }
+
+    audio.onerror = (e) => {
+      isPlaying.value = false
+      URL.revokeObjectURL(blobUrl)
+      const errorCode = e.target.error?.code
+      const errorMsg = e.target.error?.message || '未知错误'
+      console.error('音频播放错误:', errorCode, errorMsg)
+      ElMessage.error('语音播放失败: ' + errorMsg)
+    }
+
+    // 预加载音频
+    audio.load()
+
+    await audio.play()
+    isPlaying.value = true
+  } catch (e) {
     isPlaying.value = false
+    console.error('语音播放失败:', e)
+    ElMessage.error('语音播放失败: ' + e.message)
   }
-  audio.onerror = () => {
-    isPlaying.value = false
-    ElMessage.error('语音播放失败')
-  }
-  audio.play()
-  isPlaying.value = true
 }
 const downloadFile = () => emit('download', props.message)
 const playVideo = () => emit('play-video', props.message)
@@ -268,6 +312,24 @@ const handleDeleteMessage = (message) => {
 
 const handleMultiSelect = () => {
   emit('multi-select', props.message)
+}
+
+const handleTranslateMessage = (message) => {
+  emit('translate', message)
+}
+
+// 下载语音
+const downloadVoice = () => {
+  if (!props.message.fileUrl) return
+  // 创建下载链接
+  const link = document.createElement('a')
+  link.href = props.message.fileUrl
+  link.download = `voice_${props.message.id}.audio`
+  link.target = '_blank'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  ElMessage.success('语音已下载，请用播放器打开')
 }
 
 const getReplyPreviewText = () => {
@@ -490,13 +552,25 @@ const getReplyPreviewText = () => {
 .message-voice {
   display: flex;
   align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  padding: 2px 4px;
+  gap: 8px;
+  padding: 8px 12px;
   min-width: 100px;
+  cursor: pointer;
+  background: #f0f9ff;
+  border-radius: 16px;
+  transition: background 0.2s;
+
+  &:hover {
+    background: #e0f2fe;
+  }
 
   .el-icon.playing {
     color: #2b7fff;
+  }
+
+  .voice-duration {
+    font-size: 13px;
+    color: #333;
   }
 }
 

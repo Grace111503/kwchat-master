@@ -49,7 +49,7 @@ spring:
     redis:
       host: localhost
       port: 6379
-      password: redis123
+      password: 123456
       database: 0
       timeout: 10000
       lettuce:
@@ -132,6 +132,7 @@ mybatis-plus:
       table-underline: true
   configuration:
     map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
     cache-enabled: false
 
 # MinIO配置
@@ -152,7 +153,7 @@ jwt:
 
 # Knife4j配置
 knife4j:
-  enable: false
+  enable: true
   setting:
     language: zh_cn
 
@@ -160,8 +161,8 @@ knife4j:
 logging:
   level:
     root: INFO
-    com.kwp.chat: INFO
-    org.springframework.web: INFO
+    com.kwp.chat: DEBUG
+    org.springframework.web: DEBUG
     org.springframework.security: DEBUG
   pattern:
     dateformat: yyyy-MM-dd HH:mm:ss.SSS

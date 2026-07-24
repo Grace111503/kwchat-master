@@ -4,10 +4,10 @@
     <div class="contacts-sidebar">
       <div class="contacts-header">
         <el-input
-            v-model="searchKeyword"
-            placeholder="搜索联系人"
-            prefix-icon="Search"
-            clearable
+          v-model="searchKeyword"
+          placeholder="搜索联系人"
+          prefix-icon="Search"
+          clearable
         />
         <el-button type="primary" :icon="Plus" @click="showAddFriend" title="添加好友" />
         <el-button type="success" :icon="Plus" @click="showCreateGroup" title="创建群聊" />
@@ -15,11 +15,11 @@
 
       <div class="contacts-tabs">
         <div
-            v-for="tab in tabs"
-            :key="tab.key"
-            class="tab-item"
-            :class="{ active: activeTab === tab.key }"
-            @click="activeTab = tab.key"
+          v-for="tab in tabs"
+          :key="tab.key"
+          class="tab-item"
+          :class="{ active: activeTab === tab.key }"
+          @click="activeTab = tab.key"
         >
           {{ tab.label }}
         </div>
@@ -28,11 +28,11 @@
       <div class="contacts-list">
         <template v-if="activeTab === 'friends'">
           <div
-              v-for="friend in filteredFriends"
-              :key="friend.id"
-              class="contact-item"
-              :class="{ active: selectedContact?.id === friend.id }"
-              @click="selectContact(friend)"
+            v-for="friend in filteredFriends"
+            :key="friend.id"
+            class="contact-item"
+            :class="{ active: selectedContact?.id === friend.id }"
+            @click="selectContact(friend)"
           >
             <el-avatar :size="38" :src="friend.avatar" shape="square">
               {{ getAvatarFallback(friend.nickname) }}
@@ -46,11 +46,11 @@
 
         <template v-if="activeTab === 'groups'">
           <div
-              v-for="group in filteredGroups"
-              :key="group.id"
-              class="contact-item"
-              :class="{ active: selectedContact?.id === group.id }"
-              @click="startGroupChat(group)"
+            v-for="group in filteredGroups"
+            :key="group.id"
+            class="contact-item"
+            :class="{ active: selectedContact?.id === group.id }"
+            @click="startGroupChat(group)"
           >
             <el-avatar :size="38" :src="group.avatar" shape="square">
               {{ getAvatarFallback(group.name) }}
@@ -64,9 +64,9 @@
 
         <template v-if="activeTab === 'requests'">
           <div
-              v-for="request in friendRequests"
-              :key="request.id"
-              class="contact-item request-item"
+            v-for="request in friendRequests"
+            :key="request.id"
+            class="contact-item request-item"
           >
             <el-avatar :size="38" :src="request.senderAvatar" shape="square">
               {{ getAvatarFallback(request.senderName) }}
@@ -86,9 +86,9 @@
 
         <template v-if="activeTab === 'blacklist'">
           <div
-              v-for="user in blacklist"
-              :key="user.id"
-              class="contact-item"
+            v-for="user in blacklist"
+            :key="user.id"
+            class="contact-item"
           >
             <el-avatar :size="38" :src="user.avatar" shape="square">
               {{ getAvatarFallback(user.nickname) }}
@@ -128,12 +128,12 @@
             <span class="info-label">分组</span>
             <span class="info-value">
               <el-select
-                  v-model="selectedContact.groupName"
-                  placeholder="选择分组"
-                  size="small"
-                  allow-create
-                  filterable
-                  @change="handleGroupChange"
+                v-model="selectedContact.groupName"
+                placeholder="选择分组"
+                size="small"
+                allow-create
+                filterable
+                @change="handleGroupChange"
               >
                 <el-option label="默认分组" value="" />
                 <el-option v-for="group in friendGroups" :key="group" :label="group" :value="group" />
@@ -194,9 +194,9 @@
       <el-form :model="addFriendForm" label-width="80px">
         <el-form-item label="搜索">
           <el-input
-              v-model="addFriendForm.keyword"
-              placeholder="输入用户名/昵称/手机号/邮箱"
-              clearable
+            v-model="addFriendForm.keyword"
+            placeholder="输入用户名/昵称/手机号/邮箱"
+            clearable
           />
         </el-form-item>
       </el-form>
@@ -204,9 +204,9 @@
       <div v-loading="searchLoading">
         <div v-if="filteredSearchResults.length > 0" class="search-results">
           <div
-              v-for="user in filteredSearchResults"
-              :key="user.id"
-              class="search-result-item"
+            v-for="user in filteredSearchResults"
+            :key="user.id"
+            class="search-result-item"
           >
             <el-avatar :size="38" :src="user.avatar" shape="square">
               {{ getAvatarFallback(user.nickname) }}
@@ -234,10 +234,10 @@
       <el-form :model="editRemarkForm" label-width="80px">
         <el-form-item label="备注名">
           <el-input
-              v-model="editRemarkForm.remark"
-              placeholder="请输入备注名"
-              maxlength="50"
-              show-word-limit
+            v-model="editRemarkForm.remark"
+            placeholder="请输入备注名"
+            maxlength="50"
+            show-word-limit
           />
         </el-form-item>
       </el-form>
@@ -252,31 +252,31 @@
       <el-form :model="createGroupForm" label-width="80px">
         <el-form-item label="群聊名称">
           <el-input
-              v-model="createGroupForm.name"
-              placeholder="请输入群聊名称"
-              maxlength="50"
-              show-word-limit
+            v-model="createGroupForm.name"
+            placeholder="请输入群聊名称"
+            maxlength="50"
+            show-word-limit
           />
         </el-form-item>
         <el-form-item label="选择成员">
           <div class="group-member-select">
             <div class="selected-members" v-if="createGroupForm.memberIds.length > 0">
               <el-tag
-                  v-for="memberId in createGroupForm.memberIds"
-                  :key="memberId"
-                  closable
-                  @close="removeGroupMember(memberId)"
+                v-for="memberId in createGroupForm.memberIds"
+                :key="memberId"
+                closable
+                @close="removeGroupMember(memberId)"
               >
                 {{ getFriendName(memberId) }}
               </el-tag>
             </div>
             <div class="friend-list-select">
               <div
-                  v-for="friend in friends"
-                  :key="friend.id"
-                  class="friend-select-item"
-                  :class="{ selected: createGroupForm.memberIds.includes(friend.id) }"
-                  @click="toggleGroupMember(friend.id)"
+                v-for="friend in friends"
+                :key="friend.id"
+                class="friend-select-item"
+                :class="{ selected: createGroupForm.memberIds.includes(friend.id) }"
+                @click="toggleGroupMember(friend.id)"
               >
                 <el-avatar :size="32" :src="friend.avatar" shape="square">
                   {{ getAvatarFallback(friend.nickname) }}
@@ -351,8 +351,8 @@ const editRemarkForm = ref({ remark: '' })
 const filteredFriends = computed(() => {
   if (!searchKeyword.value) return friends.value
   return friends.value.filter(item =>
-      item.nickname.includes(searchKeyword.value) ||
-      (item.remark && item.remark.includes(searchKeyword.value))
+    item.nickname.includes(searchKeyword.value) ||
+    (item.remark && item.remark.includes(searchKeyword.value))
   )
 })
 

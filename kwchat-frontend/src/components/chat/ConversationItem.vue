@@ -1,90 +1,90 @@
 <template>
   <div class="conversation-item-wrapper">
     <div
-        class="conversation-item"
-        :class="{ active: isActive, 'is-pinned': conversation.isTop, 'swiped': isSwiped }"
-        @click="handleClick"
-        @contextmenu.prevent="showContextMenu"
-        @touchstart="handleTouchStart"
-        @touchmove="handleTouchMove"
-        @touchend="handleTouchEnd"
+      class="conversation-item"
+      :class="{ active: isActive, 'is-pinned': conversation.isTop, 'swiped': isSwiped }"
+      @click="handleClick"
+      @contextmenu.prevent="showContextMenu"
+      @touchstart="handleTouchStart"
+      @touchmove="handleTouchMove"
+      @touchend="handleTouchEnd"
     >
-      <div class="conversation-avatar">
-        <el-avatar
-            :size="42"
-            :src="avatarUrl"
-            shape="circle"
-            :style="!avatarUrl ? getAvatarStyle(conversation.name) : {}"
-        >
-          {{ getAvatarFallback(conversation.name) }}
-        </el-avatar>
-        <span class="online-dot" v-if="showOnlineDot && isOnline"></span>
-      </div>
+    <div class="conversation-avatar">
+      <el-avatar
+        :size="42"
+        :src="avatarUrl"
+        shape="circle"
+        :style="!avatarUrl ? getAvatarStyle(conversation.name) : {}"
+      >
+        {{ getAvatarFallback(conversation.name) }}
+      </el-avatar>
+      <span class="online-dot" v-if="showOnlineDot && isOnline"></span>
+    </div>
 
-      <div class="conversation-info">
-        <div class="conversation-header">
+    <div class="conversation-info">
+      <div class="conversation-header">
         <span class="conversation-name text-ellipsis">
           {{ displayName }}
         </span>
-          <span class="conversation-time">{{ formatTime(conversation.lastMessageTime) }}</span>
-        </div>
+        <span class="conversation-time">{{ formatTime(conversation.lastMessageTime) }}</span>
+      </div>
 
-        <div class="conversation-footer">
+      <div class="conversation-footer">
         <span class="last-message text-ellipsis">
           {{ conversation.lastMessageContent || '暂无消息' }}
         </span>
-          <el-badge
-              :value="conversation.unreadCount"
-              :max="99"
-              :hidden="!conversation.unreadCount"
-              class="unread-badge"
-          />
-        </div>
+        <el-badge
+          :value="conversation.unreadCount"
+          :max="99"
+          :hidden="!conversation.unreadCount"
+          class="unread-badge"
+        />
       </div>
+    </div>
 
-      <!-- 滑动操作按钮（移动端） -->
-      <div class="swipe-actions" v-show="isSwiped">
-        <div class="swipe-btn pin-btn" @click.stop="handlePin">
+    <!-- 滑动操作按钮（移动端） -->
+    <div class="swipe-actions">
+      <div class="swipe-btn pin-btn" @click.stop="handlePin">
+        <span>{{ conversation.isTop ? '取消置顶' : '置顶' }}</span>
+      </div>
+      <div class="swipe-btn delete-btn" @click.stop="handleDelete">
+        <span>删除</span>
+      </div>
+    </div>
+
+    <!-- 右键菜单 -->
+    <el-popover
+      v-model:visible="showMenu"
+      placement="right-start"
+      :width="140"
+      trigger="manual"
+      :virtual-ref="menuRef"
+      virtual-triggering
+    >
+      <div class="context-menu">
+        <div class="menu-item" @click="handlePin">
           <span>{{ conversation.isTop ? '取消置顶' : '置顶' }}</span>
         </div>
-        <div class="swipe-btn delete-btn" @click.stop="confirmDelete">
-          <span>删除</span>
+        <div class="menu-item" @click="handleMute">
+          <span>{{ conversation.doNotDisturb ? '取消免打扰' : '免打扰' }}</span>
+        </div>
+        <div class="menu-item danger" @click="handleDelete">
+          <span>删除会话</span>
         </div>
       </div>
-
-      <!-- 右键菜单 -->
-      <el-popover
-          v-model:visible="showMenu"
-          placement="right-start"
-          :width="140"
-          trigger="manual"
-          :virtual-ref="menuRef"
-          virtual-triggering
-      >
-        <div class="context-menu">
-          <div class="menu-item" @click="handlePin">
-            <span>{{ conversation.isTop ? '取消置顶' : '置顶' }}</span>
-          </div>
-          <div class="menu-item" @click="handleMute">
-            <span>{{ conversation.doNotDisturb ? '取消免打扰' : '免打扰' }}</span>
-          </div>
-          <div class="menu-item danger" @click="handleDelete">
-            <span>删除会话</span>
-          </div>
-        </div>
-      </el-popover>
+    </el-popover>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import 'dayjs/locale/zh-cn'
 import { setTop, setDoNotDisturb, getConversationMembers } from '@/api/conversation'
 import { generateGroupAvatar } from '@/utils/groupAvatar'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 
 dayjs.extend(relativeTime)
 dayjs.locale('zh-cn')
@@ -120,7 +120,6 @@ const handleClick = () => {
 }
 
 const handleTouchStart = (e) => {
-  // 如果有其他会话处于滑动状态，先关闭
   touchStartX.value = e.touches[0].clientX
   touchCurrentX.value = e.touches[0].clientX
 }
@@ -136,32 +135,17 @@ const handleTouchMove = (e) => {
 }
 
 const handleTouchEnd = () => {
-  // 保持滑动状态
+  // 保持滑动状态，点击其他地方时恢复
 }
-
-// 点击外部区域关闭滑动
-const handleClickOutside = (e) => {
-  if (isSwiped.value && !e.target.closest('.conversation-item-wrapper')) {
-    isSwiped.value = false
-  }
-}
-
-onMounted(() => {
-  document.addEventListener('click', handleClickOutside)
-  document.addEventListener('touchstart', handleClickOutside)
-})
-
-onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside)
-  document.removeEventListener('touchstart', handleClickOutside)
-})
 
 const handlePin = async () => {
   showMenu.value = false
   isSwiped.value = false
   try {
     const newIsTop = props.conversation.isTop ? 0 : 1
+    console.log('置顶操作:', props.conversation.id, '新状态:', newIsTop)
     await setTop(props.conversation.id, newIsTop)
+    console.log('置顶API调用成功')
     props.conversation.isTop = newIsTop
     ElMessage.success(newIsTop ? '已置顶' : '已取消置顶')
     emit('pin', { conversation: props.conversation, isTop: newIsTop })
@@ -181,20 +165,6 @@ const handleMute = async () => {
     emit('mute', { conversation: props.conversation, doNotDisturb: newDoNotDisturb })
   } catch (error) {
     ElMessage.error('操作失败')
-  }
-}
-
-const confirmDelete = async () => {
-  isSwiped.value = false
-  try {
-    await ElMessageBox.confirm('确定要删除该会话吗？', '删除会话', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    })
-    emit('delete', props.conversation)
-  } catch {
-    // 取消
   }
 }
 
@@ -257,9 +227,9 @@ const generateAvatar = async () => {
     if (res.code === 200 && res.data && res.data.length > 0) {
       // 提取前9个成员的头像URL
       const avatars = res.data
-          .slice(0, 9)
-          .map(member => member.avatar)
-          .filter(avatar => avatar) // 过滤空头像
+        .slice(0, 9)
+        .map(member => member.avatar)
+        .filter(avatar => avatar) // 过滤空头像
 
       console.log('成员头像:', avatars)
 
@@ -312,7 +282,6 @@ const formatTime = (time) => {
 <style lang="scss" scoped>
 .conversation-item-wrapper {
   position: relative;
-  overflow: hidden;
 }
 
 .conversation-item {
@@ -320,11 +289,10 @@ const formatTime = (time) => {
   align-items: center;
   padding: 10px 12px;
   cursor: pointer;
-  transition: transform 0.2s ease, background 0.1s;
+  transition: transform 0.2s, background 0.1s;
   border-bottom: 1px solid #f0f0f0;
   position: relative;
   background: #fff;
-  z-index: 1;
 
   &:hover {
     background: #f0f0f0;
@@ -353,7 +321,7 @@ const formatTime = (time) => {
   top: 0;
   bottom: 0;
   display: flex;
-  z-index: 0;
+  z-index: -1;
 
   .swipe-btn {
     display: flex;
@@ -363,11 +331,6 @@ const formatTime = (time) => {
     color: #fff;
     font-size: 13px;
     cursor: pointer;
-    transition: opacity 0.15s;
-
-    &:active {
-      opacity: 0.8;
-    }
 
     &.pin-btn {
       background: #2b7fff;

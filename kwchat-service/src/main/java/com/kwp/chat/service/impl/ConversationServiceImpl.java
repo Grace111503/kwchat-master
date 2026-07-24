@@ -17,8 +17,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * 会话服务实现类
@@ -131,32 +129,7 @@ public class ConversationServiceImpl implements ConversationService {
 
     @Override
     public List<ConversationMember> getConversationMembers(Long conversationId) {
-        List<ConversationMember> members = conversationMemberMapper.selectByConversationId(conversationId);
-
-        // 批量查询成员的用户头像
-        List<Long> userIds = members.stream()
-                .map(ConversationMember::getUserId)
-                .distinct()
-                .collect(Collectors.toList());
-
-        if (!userIds.isEmpty()) {
-            List<User> users = userMapper.selectByIds(userIds);
-            Map<Long, User> userMap = users.stream()
-                    .collect(Collectors.toMap(User::getId, u -> u));
-
-            for (ConversationMember member : members) {
-                User user = userMap.get(member.getUserId());
-                if (user != null) {
-                    member.setAvatar(user.getAvatar());
-                    // 如果成员没有群内昵称，用用户昵称作为备选
-                    if (member.getNickname() == null) {
-                        member.setNickname(user.getNickname());
-                    }
-                }
-            }
-        }
-
-        return members;
+        return conversationMemberMapper.selectByConversationId(conversationId);
     }
 
     @Override

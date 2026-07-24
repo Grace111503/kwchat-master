@@ -65,7 +65,9 @@
       "Bash(javap -classpath /c/Users/Administrator/.m2/repository/io/netty/netty-all/4.1.100.Final/netty-all-4.1.100.Final.jar io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler)",
       "Bash(docker exec *)",
       "Bash(curl -s http://localhost:8080/api/conversation/list -H \"Authorization: Bearer test\")",
-      "Bash(mvn compile *)"
+      "Bash(mvn compile *)",
+      "WebFetch(domain:github.com)",
+      "Bash(git ls-tree *)"
     ]
   }
 }

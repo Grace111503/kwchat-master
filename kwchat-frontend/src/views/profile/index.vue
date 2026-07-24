@@ -10,11 +10,11 @@
           <span>修改头像</span>
         </div>
         <input
-            ref="fileInputRef"
-            type="file"
-            accept="image/jpeg,image/png,image/gif,image/webp"
-            style="display: none"
-            @change="handleFileChange"
+          ref="fileInputRef"
+          type="file"
+          accept="image/jpeg,image/png,image/gif,image/webp"
+          style="display: none"
+          @change="handleFileChange"
         />
       </div>
       <h2 class="profile-name">{{ userInfo?.username || '用户' }}</h2>

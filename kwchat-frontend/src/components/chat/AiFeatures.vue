@@ -2,10 +2,10 @@
   <div class="ai-features">
     <!-- 智能摘要 -->
     <el-dialog
-        v-model="showSummary"
-        title="智能摘要"
-        width="500px"
-        :close-on-click-modal="false"
+      v-model="showSummary"
+      title="智能摘要"
+      width="500px"
+      :close-on-click-modal="false"
     >
       <div class="summary-options">
         <el-radio-group v-model="summaryType">
@@ -15,12 +15,12 @@
         </el-radio-group>
 
         <el-input-number
-            v-model="messageLimit"
-            :min="10"
-            :max="500"
-            :step="10"
-            size="small"
-            placeholder="消息数量"
+          v-model="messageLimit"
+          :min="10"
+          :max="500"
+          :step="10"
+          size="small"
+          placeholder="消息数量"
         />
       </div>
 
@@ -42,21 +42,49 @@
 
     <!-- 消息翻译 -->
     <el-dialog
-        v-model="showTranslate"
-        title="消息翻译"
-        width="500px"
-        :close-on-click-modal="false"
+      v-model="showTranslate"
+      title="消息翻译"
+      width="500px"
+      :close-on-click-modal="false"
     >
       <div class="translate-form">
         <div class="translate-header">
           <el-select v-model="targetLanguage" placeholder="目标语言" style="width: 120px">
             <el-option
-                v-for="lang in languages"
-                :key="lang.code"
-                :label="lang.name"
-                :value="lang.code"
+              v-for="lang in languages"
+              :key="lang.code"
+              :label="lang.name"
+              :value="lang.code"
             />
           </el-select>
+        </div>
+
+        <!-- 选择要翻译的消息 -->
+        <div class="select-message" v-if="!selectedMessageForTranslate">
+          <div class="message-list-select">
+            <div class="list-header">选择要翻译的消息：</div>
+            <div class="message-options" v-if="recentMessages.length > 0">
+              <div
+                v-for="msg in recentMessages"
+                :key="msg.id"
+                class="message-option"
+                @click="selectMessageForTranslate(msg)"
+              >
+                <span class="msg-content">{{ msg.content?.substring(0, 50) }}{{ msg.content?.length > 50 ? '...' : '' }}</span>
+                <span class="msg-time">{{ formatTime(msg.createTime) }}</span>
+              </div>
+            </div>
+            <div v-else class="no-messages">暂无文本消息</div>
+          </div>
+        </div>
+
+        <!-- 已选择的消息 -->
+        <div class="selected-message" v-else>
+          <div class="message-preview">
+            <span class="label">选取消息：</span>
+            <span class="text">{{ selectedMessageForTranslate.content }}</span>
+          </div>
+          <el-button type="primary" link size="small" @click="clearSelectedMessage">重新选择</el-button>
         </div>
 
         <div class="translate-content" v-if="translateResult">
@@ -107,10 +135,10 @@
       </div>
       <div class="suggestions-list">
         <div
-            v-for="(suggestion, index) in suggestions"
-            :key="index"
-            class="suggestion-item"
-            @click="$emit('select-suggestion', suggestion)"
+          v-for="(suggestion, index) in suggestions"
+          :key="index"
+          class="suggestion-item"
+          @click="$emit('select-suggestion', suggestion)"
         >
           {{ suggestion }}
         </div>
@@ -121,8 +149,10 @@
 
 <script setup>
 import { ref } from 'vue'
-import { generateSummary, translateMessage, suggestReplies, supportedLanguages } from '@/api/ai'
+import { generateSummary, translateMessage, translateText, suggestReplies, supportedLanguages } from '@/api/ai'
 import { ElMessage } from 'element-plus'
+
+import dayjs from 'dayjs'
 
 const props = defineProps({
   conversationId: {
@@ -133,13 +163,17 @@ const props = defineProps({
     type: Number,
     default: null
   },
+  selectedMessage: {
+    type: Object,
+    default: null
+  },
   recentMessages: {
     type: Array,
     default: () => []
   }
 })
 
-const emit = defineEmits(['select-suggestion'])
+const emit = defineEmits(['select-suggestion', 'select-message-for-translate'])
 
 // 语言列表
 const languages = supportedLanguages
@@ -205,7 +239,18 @@ const selectMessageForTranslate = (message) => {
   selectedMessageForTranslate.value = message
 }
 
-// 直接翻译消息（从三点菜单触发）
+// 清除选中的消息
+const clearSelectedMessage = () => {
+  selectedMessageForTranslate.value = null
+}
+
+// 格式化时间
+const formatTime = (time) => {
+  if (!time) return ''
+  return dayjs(time).format('HH:mm')
+}
+
+// 直接翻译消息（从三点菜单触发，自动翻译）
 const translateDirectly = async (message) => {
   if (!message || !message.content) {
     ElMessage.warning('无法翻译该消息')
@@ -214,10 +259,11 @@ const translateDirectly = async (message) => {
 
   selectedMessageForTranslate.value = message
   showTranslate.value = true
-  targetLanguage.value = 'en'
+  targetLanguage.value = 'en' // 默认翻译为英语
   translateResult.value = null
   showQuickActions.value = false
 
+  // 自动开始翻译
   translateLoading.value = true
   try {
     const res = await translateMessage(message.id, targetLanguage.value)
@@ -233,11 +279,30 @@ const translateDirectly = async (message) => {
 
 // 翻译消息
 const handleTranslate = async () => {
+  const textToTranslate = selectedMessageForTranslate.value?.content || translateInputText.value
+  if (!textToTranslate) {
+    ElMessage.warning('请输入或选择要翻译的内容')
+    return
+  }
+
   translateLoading.value = true
   try {
-    const res = await translateMessage(props.messageId, targetLanguage.value)
-    if (res.code === 200) {
-      translateResult.value = res.data
+    // 如果有选中的消息，使用消息ID翻译；否则使用文本翻译
+    if (selectedMessageForTranslate.value) {
+      const res = await translateMessage(selectedMessageForTranslate.value.id, targetLanguage.value)
+      if (res.code === 200) {
+        translateResult.value = res.data
+      }
+    } else {
+      // 直接翻译输入的文本
+      const res = await translateText(textToTranslate, targetLanguage.value)
+      if (res.code === 200) {
+        translateResult.value = {
+          originalContent: textToTranslate,
+          content: res.data,
+          processingTime: 0
+        }
+      }
     }
   } catch (error) {
     ElMessage.error('翻译失败')
@@ -321,6 +386,95 @@ defineExpose({
 .translate-form {
   .translate-header {
     margin-bottom: 16px;
+  }
+
+  .select-message {
+    margin-bottom: 16px;
+  }
+
+  .message-list-select {
+    border: 1px solid #e8e8e8;
+    border-radius: 4px;
+    max-height: 200px;
+    overflow-y: auto;
+
+    .list-header {
+      padding: 8px 12px;
+      font-size: 12px;
+      color: #999;
+      background: #fafafa;
+      border-bottom: 1px solid #e8e8e8;
+    }
+
+    .message-options {
+      .message-option {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 12px;
+        cursor: pointer;
+        transition: background 0.15s;
+        border-bottom: 1px solid #f5f5f5;
+
+        &:hover {
+          background: #f0f9ff;
+        }
+
+        &:last-child {
+          border-bottom: none;
+        }
+
+        .msg-content {
+          flex: 1;
+          font-size: 13px;
+          color: #333;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .msg-time {
+          font-size: 11px;
+          color: #999;
+          margin-left: 8px;
+        }
+      }
+    }
+
+    .no-messages {
+      padding: 20px;
+      text-align: center;
+      color: #999;
+      font-size: 13px;
+    }
+  }
+
+  .selected-message {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: #f5f7fa;
+    border-radius: 4px;
+    margin-bottom: 16px;
+
+    .message-preview {
+      flex: 1;
+      overflow: hidden;
+
+      .label {
+        font-size: 12px;
+        color: #999;
+      }
+
+      .text {
+        font-size: 14px;
+        color: #333;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
   }
 
   .translate-content {

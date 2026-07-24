@@ -4,7 +4,6 @@ import com.kwp.chat.websocket.manager.ChannelManager;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kwp.chat.common.utils.JwtUtils;
 import com.kwp.chat.dao.ConversationMemberMapper;
-import com.kwp.chat.dao.UserMapper;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
@@ -30,7 +29,6 @@ public class WebSocketInitializer extends ChannelInitializer<SocketChannel> {
     private final JwtUtils jwtUtils;
     private final ObjectMapper objectMapper;
     private final ConversationMemberMapper conversationMemberMapper;
-    private final UserMapper userMapper;
 
     @Override
     protected void initChannel(SocketChannel ch) throws Exception {
@@ -55,6 +53,6 @@ public class WebSocketInitializer extends ChannelInitializer<SocketChannel> {
         pipeline.addLast(new HeartbeatHandler(channelManager));
 
         // WebSocket消息处理器 - 每次创建新实例
-        pipeline.addLast(new WebSocketHandler(channelManager, jwtUtils, objectMapper, conversationMemberMapper, userMapper));
+        pipeline.addLast(new WebSocketHandler(channelManager, jwtUtils, objectMapper, conversationMemberMapper));
     }
 }

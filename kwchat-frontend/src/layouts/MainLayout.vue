@@ -12,11 +12,11 @@
 
       <div class="sidebar-menu">
         <div
-            v-for="item in menuItems"
-            :key="item.path"
-            class="menu-item"
-            :class="{ active: isActive(item.path) }"
-            @click="navigateTo(item.path)"
+          v-for="item in menuItems"
+          :key="item.path"
+          class="menu-item"
+          :class="{ active: isActive(item.path) }"
+          @click="navigateTo(item.path)"
         >
           <div class="menu-icon-wrapper">
             <el-icon :size="20">
@@ -48,11 +48,11 @@
     <!-- 底部导航栏（移动端） -->
     <div class="bottom-nav hide-desktop safe-area-bottom">
       <div
-          v-for="item in menuItems"
-          :key="item.path"
-          class="bottom-nav-item"
-          :class="{ active: isActive(item.path) }"
-          @click="navigateTo(item.path)"
+        v-for="item in menuItems"
+        :key="item.path"
+        class="bottom-nav-item"
+        :class="{ active: isActive(item.path) }"
+        @click="navigateTo(item.path)"
       >
         <div class="nav-icon-wrapper">
           <el-icon :size="22">
@@ -67,7 +67,7 @@
 </template>
 
 <script setup>
-import { computed, nextTick } from 'vue'
+import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/store/user'
 import { useChatStore } from '@/store/chat'
@@ -118,21 +118,18 @@ const getAvatarFallback = (name) => {
 }
 
 const navigateTo = (path) => {
-  if (route.path === path) return
-  nextTick(() => {
-    router.push(path).catch(() => {})
-  })
+  router.push(path)
 }
 
 const handleLogout = () => {
   ElMessageBox.confirm(
-      '确定要退出登录吗？',
-      '系统提示',
-      {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }
+    '确定要退出登录吗？',
+    '系统提示',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }
   ).then(async () => {
     await userStore.logoutAction()
     router.push({ name: 'Login' })

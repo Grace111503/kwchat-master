@@ -69,10 +69,4 @@ public class ConversationMember extends BaseEntity {
      */
     @TableField("join_time")
     private LocalDateTime joinTime;
-
-    /**
-     * 用户头像（非数据库字段，从 sys_user 表填充）
-     */
-    @TableField(exist = false)
-    private String avatar;
 }
