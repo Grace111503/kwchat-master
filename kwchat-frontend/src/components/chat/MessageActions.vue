@@ -2,10 +2,10 @@
   <div class="message-actions">
     <!-- 消息右键菜单 -->
     <el-popover
-      v-model:visible="showMenu"
-      placement="bottom"
-      :width="160"
-      trigger="click"
+        v-model:visible="showMenu"
+        placement="bottom"
+        :width="160"
+        trigger="click"
     >
       <template #reference>
         <div class="action-trigger" @click.stop>
@@ -38,12 +38,6 @@
           <span>收藏</span>
         </div>
 
-        <!-- 翻译 -->
-        <div class="menu-item" @click="handleTranslate" v-if="message.messageType === 1">
-          <el-icon><Translate /></el-icon>
-          <span>翻译</span>
-        </div>
-
         <!-- 多选 -->
         <div class="menu-item" @click="handleMultiSelect">
           <el-icon><Finished /></el-icon>
@@ -52,9 +46,9 @@
 
         <!-- 撤回（只能撤回自己的消息） -->
         <div
-          class="menu-item danger"
-          @click="handleRecall"
-          v-if="isSelf && canRecall"
+            class="menu-item danger"
+            @click="handleRecall"
+            v-if="isSelf && canRecall"
         >
           <el-icon><Delete /></el-icon>
           <span>撤回</span>
@@ -70,9 +64,9 @@
 
     <!-- 转发对话框 -->
     <el-dialog
-      v-model="showForward"
-      title="转发消息"
-      width="400px"
+        v-model="showForward"
+        title="转发消息"
+        width="400px"
     >
       <div class="forward-content">
         <div class="forward-preview">
@@ -83,16 +77,16 @@
         <div class="forward-target">
           <div class="target-label">转发给：</div>
           <el-select
-            v-model="forwardTarget"
-            filterable
-            placeholder="选择会话"
-            style="width: 100%"
+              v-model="forwardTarget"
+              filterable
+              placeholder="选择会话"
+              style="width: 100%"
           >
             <el-option
-              v-for="conversation in conversations"
-              :key="conversation.id"
-              :label="conversation.name"
-              :value="conversation.id"
+                v-for="conversation in conversations"
+                :key="conversation.id"
+                :label="conversation.name"
+                :value="conversation.id"
             >
               <div class="conversation-option">
                 <el-avatar :size="24" :src="conversation.avatar">
@@ -132,7 +126,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['reply', 'forward', 'recall', 'delete', 'copy', 'favorite', 'multi-select', 'translate'])
+const emit = defineEmits(['reply', 'forward', 'recall', 'delete', 'copy', 'favorite', 'multi-select'])
 
 const chatStore = useChatStore()
 const showMenu = ref(false)
@@ -173,17 +167,17 @@ const confirmForward = async () => {
 
   try {
     await chatStore.sendMessage(
-      forwardTarget.value,
-      props.message.messageType,
-      props.message.content,
-      {
-        fileUrl: props.message.fileUrl,
-        fileName: props.message.fileName,
-        fileSize: props.message.fileSize,
-        fileType: props.message.fileType,
-        isForward: true,
-        originalMessageId: props.message.id
-      }
+        forwardTarget.value,
+        props.message.messageType,
+        props.message.content,
+        {
+          fileUrl: props.message.fileUrl,
+          fileName: props.message.fileName,
+          fileSize: props.message.fileSize,
+          fileType: props.message.fileType,
+          isForward: true,
+          originalMessageId: props.message.id
+        }
     )
 
     showForward.value = false
@@ -214,13 +208,13 @@ const handleCopy = () => {
 
   if (props.message.content) {
     navigator.clipboard.writeText(props.message.content)
-      .then(() => {
-        ElMessage.success('已复制到剪贴板')
-        emit('copy', props.message)
-      })
-      .catch(() => {
-        ElMessage.error('复制失败')
-      })
+        .then(() => {
+          ElMessage.success('已复制到剪贴板')
+          emit('copy', props.message)
+        })
+        .catch(() => {
+          ElMessage.error('复制失败')
+        })
   }
 }
 
@@ -236,17 +230,10 @@ const handleFavorite = async () => {
   }
 }
 
-// 翻译消息
-const handleTranslate = () => {
-  showMenu.value = false
-  emit('translate', props.message)
-}
-
 // 多选
 const handleMultiSelect = () => {
   showMenu.value = false
   emit('multi-select', props.message)
-  ElMessage.info('已进入多选模式，点击消息选择')
 }
 
 // 撤回消息
