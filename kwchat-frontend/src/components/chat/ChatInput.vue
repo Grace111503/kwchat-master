@@ -42,13 +42,11 @@
         </el-icon>
       </el-tooltip>
 
-      <el-tooltip content="语音" placement="top">
+      <el-tooltip :content="isRecording ? '点击发送' : '点击录音'" placement="top">
         <el-icon
           class="toolbar-btn"
           :class="{ 'recording': isRecording }"
-          @mousedown="startVoiceRecord"
-          @mouseup="stopVoiceRecord"
-          @mouseleave="cancelVoiceRecord"
+          @click="toggleVoiceRecord"
         >
           <Microphone />
         </el-icon>
@@ -64,7 +62,7 @@
     <div class="recording-tip" v-if="isRecording">
       <span class="recording-dot"></span>
       <span>正在录音... {{ recordingTime }}s</span>
-      <span class="tip">松开发送</span>
+      <span class="tip">点击麦克风发送</span>
     </div>
 
     <!-- 表情面板 -->
@@ -234,6 +232,17 @@ const recordVideo = () => {
   input.click()
 }
 
+// 切换录音状态（点击一次开始，再点击一次发送）
+const toggleVoiceRecord = async () => {
+  if (isRecording.value) {
+    // 如果正在录音，停止并发送
+    stopVoiceRecord()
+  } else {
+    // 如果没有录音，开始录音
+    await startVoiceRecord()
+  }
+}
+
 // 开始录音
 const startVoiceRecord = async () => {
   try {
@@ -250,17 +259,23 @@ const startVoiceRecord = async () => {
 
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
 
-    // 使用最兼容的格式
+    // 使用兼容性更好的格式（优先mp4，因为Safari不支持webm）
     let mimeType = ''
-    if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+    let fileExtension = 'webm'
+
+    // 优先使用mp4格式（兼容性最好）
+    if (MediaRecorder.isTypeSupported('audio/mp4')) {
+      mimeType = 'audio/mp4'
+      fileExtension = 'm4a'
+    } else if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
       mimeType = 'audio/webm;codecs=opus'
+      fileExtension = 'webm'
     } else if (MediaRecorder.isTypeSupported('audio/webm')) {
       mimeType = 'audio/webm'
-    } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
-      mimeType = 'audio/mp4'
+      fileExtension = 'webm'
     }
 
-    console.log('使用录音格式:', mimeType || '默认')
+    console.log('使用录音格式:', mimeType || '默认', '文件扩展名:', fileExtension)
 
     mediaRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream)
     audioChunks = []
@@ -283,7 +298,7 @@ const startVoiceRecord = async () => {
       }
 
       const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' })
-      const file = new File([blob], `voice_${Date.now()}.webm`, { type: mediaRecorder.mimeType || 'audio/webm' })
+      const file = new File([blob], `voice_${Date.now()}.${fileExtension}`, { type: mediaRecorder.mimeType || 'audio/webm' })
       // 将录音时长传递给父组件
       file.recordingDuration = recordingTime.value
       emit('send-voice', file)
@@ -303,7 +318,7 @@ const startVoiceRecord = async () => {
       }
     }, 1000)
 
-    ElMessage.success('开始录音，请长按说话')
+    ElMessage.success('开始录音，点击麦克风发送')
   } catch (error) {
     console.error('录音启动失败:', error)
     if (error.name === 'NotAllowedError') {
@@ -316,11 +331,20 @@ const startVoiceRecord = async () => {
   }
 }
 
-// 停止录音
+// 停止录音并发送
 const stopVoiceRecord = () => {
-  if (mediaRecorder && mediaRecorder.state === 'recording') {
-    mediaRecorder.stop()
+  if (!isRecording.value || !mediaRecorder || mediaRecorder.state !== 'recording') {
+    return
   }
+
+  // 检查录音时长
+  if (recordingTime.value < 1) {
+    ElMessage.warning('录音时间太短')
+    cancelVoiceRecord()
+    return
+  }
+
+  mediaRecorder.stop()
   isRecording.value = false
   if (recordingTimer) {
     clearInterval(recordingTimer)
@@ -328,7 +352,7 @@ const stopVoiceRecord = () => {
   }
 }
 
-// 取消录音
+// 取消录音（不发送）
 const cancelVoiceRecord = () => {
   if (isRecording.value) {
     if (mediaRecorder && mediaRecorder.state === 'recording') {
@@ -340,6 +364,7 @@ const cancelVoiceRecord = () => {
       clearInterval(recordingTimer)
       recordingTimer = null
     }
+    ElMessage.info('已取消录音')
   }
 }
 

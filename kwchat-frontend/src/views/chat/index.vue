@@ -22,6 +22,7 @@
             :is-active="chatStore.currentConversation?.id === conversation.id"
             @select="handleSelectConversation"
             @delete="handleDeleteConversation"
+            @pin="handlePinConversation"
           />
         </div>
 
@@ -35,6 +36,7 @@
             :is-active="chatStore.currentConversation?.id === conversation.id"
             @select="handleSelectConversation"
             @delete="handleDeleteConversation"
+            @pin="handlePinConversation"
           />
         </div>
 
@@ -196,6 +198,41 @@
       v-model:visible="userProfileVisible"
       :user="selectedUser"
     />
+
+    <!-- 转发对话框 -->
+    <el-dialog
+      v-model="showForwardDialog"
+      title="转发消息"
+      width="400px"
+    >
+      <div class="forward-dialog-content">
+        <div class="forward-preview">
+          <span>转发 {{ selectedMessages.length }} 条消息</span>
+        </div>
+        <div class="forward-target">
+          <div class="target-label">选择转发目标：</div>
+          <el-select
+            v-model="forwardTargetId"
+            placeholder="请选择会话"
+            style="width: 100%"
+            filterable
+          >
+            <el-option
+              v-for="conv in chatStore.conversations"
+              :key="conv.id"
+              :label="conv.name"
+              :value="conv.id"
+            />
+          </el-select>
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="showForwardDialog = false">取消</el-button>
+        <el-button type="primary" @click="confirmForward" :disabled="!forwardTargetId">
+          转发
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -300,6 +337,15 @@ const handleDeleteConversation = (conversation) => {
     }
     ElMessage.success('会话已删除')
   }).catch(() => {})
+}
+
+const handlePinConversation = ({ conversation, isTop }) => {
+  console.log('会话置顶状态变更:', conversation.id, isTop)
+  // 更新会话列表中的置顶状态
+  const conv = chatStore.conversations.find(c => c.id === conversation.id)
+  if (conv) {
+    conv.isTop = isTop
+  }
 }
 
 const handleSelectConversation = async (conversation) => {
@@ -546,7 +592,45 @@ const batchForwardMessages = () => {
     ElMessage.warning('请先选择消息')
     return
   }
-  ElMessage.info('转发功能开发中')
+  showForwardDialog.value = true
+}
+
+const showForwardDialog = ref(false)
+const forwardTargetId = ref(null)
+
+const confirmForward = async () => {
+  if (!forwardTargetId.value) {
+    ElMessage.warning('请选择转发目标')
+    return
+  }
+
+  try {
+    // 逐个转发消息
+    for (const message of selectedMessages.value) {
+      await chatStore.sendMessage(
+        forwardTargetId.value,
+        message.messageType,
+        message.content,
+        {
+          fileUrl: message.fileUrl,
+          fileName: message.fileName,
+          fileSize: message.fileSize,
+          fileType: message.fileType,
+          isForward: true,
+          originalMessageId: message.id
+        }
+      )
+    }
+
+    ElMessage.success(`已转发 ${selectedMessages.value.length} 条消息`)
+    showForwardDialog.value = false
+    forwardTargetId.value = null
+    selectedMessages.value = []
+    isMultiSelectMode.value = false
+  } catch (error) {
+    console.error('转发失败:', error)
+    ElMessage.error('转发失败')
+  }
 }
 
 const batchFavoriteMessages = async () => {
@@ -629,11 +713,19 @@ const handleMessageClick = (message, event) => {
   }
 }
 
-const handleDeleteMessage = (message) => {
-  // 从消息列表中移除
-  const index = chatStore.messages.findIndex(m => m.id === message.id)
-  if (index !== -1) {
-    chatStore.messages.splice(index, 1)
+const handleDeleteMessage = async (message) => {
+  try {
+    // 调用后端API删除消息
+    await deleteMessage(message.id)
+    // 从消息列表中移除
+    const index = chatStore.messages.findIndex(m => m.id === message.id)
+    if (index !== -1) {
+      chatStore.messages.splice(index, 1)
+    }
+    ElMessage.success('消息已删除')
+  } catch (error) {
+    console.error('删除消息失败:', error)
+    ElMessage.error('删除失败')
   }
 }
 
@@ -750,6 +842,23 @@ onUnmounted(() => {
 </script>
 
 <style lang="scss" scoped>
+.forward-dialog-content {
+  .forward-preview {
+    padding: 12px;
+    background: #f5f7fa;
+    border-radius: 4px;
+    margin-bottom: 16px;
+    color: #666;
+  }
+
+  .forward-target {
+    .target-label {
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+  }
+}
+
 .chat-container {
   display: flex;
   height: 100%;

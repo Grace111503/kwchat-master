@@ -158,3 +158,13 @@ export function updateMemberRole(conversationId, userId, role) {
     data: { role }
   })
 }
+
+/**
+ * 退出会话（单聊隐藏会话，群聊退出群聊）
+ */
+export function exitConversation(conversationId) {
+  return request({
+    url: `/conversation/${String(conversationId)}/exit`,
+    method: 'post'
+  })
+}

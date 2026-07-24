@@ -42,7 +42,7 @@
       </div>
     </div>
 
-    <!-- 滑动操作按钮（移动端） -->
+    <!-- 滑动操作按钮 -->
     <div class="swipe-actions">
       <div class="swipe-btn pin-btn" @click.stop="handlePin">
         <span>{{ conversation.isTop ? '取消置顶' : '置顶' }}</span>
@@ -52,7 +52,7 @@
       </div>
     </div>
 
-    <!-- 右键菜单 -->
+    <!-- 右键菜单（PC端） -->
     <el-popover
       v-model:visible="showMenu"
       placement="right-start"
@@ -82,12 +82,16 @@ import { ref, computed, watch, onMounted } from 'vue'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import 'dayjs/locale/zh-cn'
-import { setTop, setDoNotDisturb, getConversationMembers } from '@/api/conversation'
+import { setTop, setDoNotDisturb, getConversationMembers, exitConversation } from '@/api/conversation'
+import { getUserDetail } from '@/api/user'
 import { generateGroupAvatar } from '@/utils/groupAvatar'
 import { ElMessage } from 'element-plus'
 
 dayjs.extend(relativeTime)
 dayjs.locale('zh-cn')
+
+// 用户信息缓存
+const userCache = new Map()
 
 const props = defineProps({
   conversation: { type: Object, required: true },
@@ -105,7 +109,12 @@ const isSwiped = ref(false)
 const touchStartX = ref(0)
 const touchCurrentX = ref(0)
 
+// 检测是否是移动设备
+const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+
 const showContextMenu = (e) => {
+  // 仅PC端显示右键菜单
+  if (isMobile) return
   menuRef.value = e.target
   showMenu.value = true
 }
@@ -122,25 +131,41 @@ const handleClick = () => {
 const handleTouchStart = (e) => {
   touchStartX.value = e.touches[0].clientX
   touchCurrentX.value = e.touches[0].clientX
+  console.log('触摸开始:', touchStartX.value)
 }
 
 const handleTouchMove = (e) => {
   touchCurrentX.value = e.touches[0].clientX
   const diff = touchStartX.value - touchCurrentX.value
-  if (diff > 30) {
+  console.log('触摸移动，差值:', diff)
+
+  // 向左滑动超过50px时显示操作按钮
+  if (diff > 50) {
     isSwiped.value = true
-  } else if (diff < -10) {
+  } else if (diff < -30) {
     isSwiped.value = false
   }
 }
 
 const handleTouchEnd = () => {
-  // 保持滑动状态，点击其他地方时恢复
+  console.log('触摸结束，当前状态:', isSwiped.value)
+  // 如果滑动距离不够，恢复原状
+  const diff = touchStartX.value - touchCurrentX.value
+  if (diff < 50 && diff > -30) {
+    isSwiped.value = false
+  }
 }
 
-const handlePin = async () => {
+const handlePin = async (e) => {
+  // 阻止事件冒泡
+  if (e) {
+    e.stopPropagation()
+    e.preventDefault()
+  }
+
   showMenu.value = false
   isSwiped.value = false
+
   try {
     const newIsTop = props.conversation.isTop ? 0 : 1
     console.log('置顶操作:', props.conversation.id, '新状态:', newIsTop)
@@ -168,9 +193,21 @@ const handleMute = async () => {
   }
 }
 
-const handleDelete = () => {
+const handleDelete = async () => {
   isSwiped.value = false
-  emit('delete', props.conversation)
+  showMenu.value = false
+  try {
+    const res = await exitConversation(props.conversation.id)
+    if (res.code === 200) {
+      ElMessage.success('会话已删除')
+      emit('delete', props.conversation)
+    } else {
+      ElMessage.error(res.message || '删除失败')
+    }
+  } catch (error) {
+    console.error('删除会话失败:', error)
+    ElMessage.error('删除失败')
+  }
 }
 
 // 获取头像 fallback 文字（显示最后两个字）
@@ -225,11 +262,35 @@ const generateAvatar = async () => {
     console.log('群成员响应:', res)
 
     if (res.code === 200 && res.data && res.data.length > 0) {
-      // 提取前9个成员的头像URL
-      const avatars = res.data
-        .slice(0, 9)
-        .map(member => member.avatar)
-        .filter(avatar => avatar) // 过滤空头像
+      // 获取前9个成员的头像URL
+      const members = res.data.slice(0, 9)
+      const avatars = []
+
+      // 为每个成员查询用户信息获取头像
+      for (const member of members) {
+        try {
+          // 检查缓存
+          if (userCache.has(member.userId)) {
+            const cachedUser = userCache.get(member.userId)
+            if (cachedUser.avatar) {
+              avatars.push(cachedUser.avatar)
+            }
+            continue
+          }
+
+          // 查询用户信息
+          const userRes = await getUserDetail(member.userId)
+          if (userRes.code === 200 && userRes.data) {
+            // 缓存用户信息
+            userCache.set(member.userId, userRes.data)
+            if (userRes.data.avatar) {
+              avatars.push(userRes.data.avatar)
+            }
+          }
+        } catch (e) {
+          console.warn('获取用户信息失败:', member.userId, e)
+        }
+      }
 
       console.log('成员头像:', avatars)
 
@@ -315,13 +376,15 @@ const formatTime = (time) => {
   }
 }
 
+// 移动端左滑按钮
 .swipe-actions {
   position: absolute;
   right: 0;
   top: 0;
   bottom: 0;
   display: flex;
-  z-index: -1;
+  z-index: 1;
+  transform: translateX(100%);
 
   .swipe-btn {
     display: flex;
@@ -331,6 +394,11 @@ const formatTime = (time) => {
     color: #fff;
     font-size: 13px;
     cursor: pointer;
+    transition: background-color 0.2s;
+
+    &:active {
+      opacity: 0.8;
+    }
 
     &.pin-btn {
       background: #2b7fff;
@@ -339,6 +407,22 @@ const formatTime = (time) => {
     &.delete-btn {
       background: #f56c6c;
     }
+  }
+}
+
+// 移动端左滑时显示按钮
+@media (max-width: 768px) {
+  .conversation-item.swiped {
+    .swipe-actions {
+      transform: translateX(0);
+    }
+  }
+}
+
+// PC端隐藏左滑按钮
+@media (min-width: 769px) {
+  .swipe-actions {
+    display: none;
   }
 }
 

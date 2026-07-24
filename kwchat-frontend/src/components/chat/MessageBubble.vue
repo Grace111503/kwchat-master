@@ -251,10 +251,22 @@ const playVoice = async () => {
     const blobUrl = URL.createObjectURL(blob)
     console.log('Blob URL:', blobUrl)
 
-    audio = new Audio(blobUrl)
+    // 根据音频类型创建不同的播放器
+    const audioType = blob.type || 'audio/webm'
+    console.log('音频类型:', audioType)
 
-    // 设置音频类型
-    audio.type = blob.type || 'audio/webm'
+    // 检查浏览器是否支持该音频格式
+    const audioElement = document.createElement('audio')
+    const canPlayType = audioElement.canPlayType(audioType)
+    console.log('浏览器支持该格式:', canPlayType)
+
+    if (canPlayType === '') {
+      console.warn('浏览器不支持该音频格式，尝试使用默认格式播放')
+    }
+
+    audio = new Audio()
+    audio.src = blobUrl
+    audio.type = audioType
 
     audio.onended = () => {
       isPlaying.value = false

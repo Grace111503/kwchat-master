@@ -1,9 +1,13 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { getConversationList, clearUnreadCount } from '@/api/conversation'
+import { getConversationList, clearUnreadCount, getConversationMembers } from '@/api/conversation'
 import { getMessageList, sendMessage as sendMessageApi, markConversationMessagesAsRead } from '@/api/message'
+import { getUserDetail } from '@/api/user'
 import websocketManager from '@/utils/websocket'
 import { getToken } from '@/utils/auth'
+
+// 用户信息缓存
+const userCache = new Map()
 
 export const useChatStore = defineStore('chat', () => {
   // 状态
@@ -104,7 +108,74 @@ export const useChatStore = defineStore('chat', () => {
       const page = isRefresh ? 1 : currentPage.value
       const res = await getMessageList(conversationId, page, pageSize)
       if (res.code === 200) {
-        const newMessages = res.data?.records || res.data || []
+        let newMessages = res.data?.records || res.data || []
+
+        // 获取会话成员信息，用于填充senderName和senderAvatar
+        try {
+          const membersRes = await getConversationMembers(conversationId)
+          if (membersRes.code === 200 && membersRes.data) {
+            // 为每个成员查询用户信息获取头像
+            const memberMap = {}
+            for (const member of membersRes.data) {
+              // 检查缓存
+              if (userCache.has(member.userId)) {
+                const cachedUser = userCache.get(member.userId)
+                memberMap[member.userId] = {
+                  senderName: member.nickname || cachedUser.nickname || cachedUser.username || '未知用户',
+                  senderAvatar: cachedUser.avatar || null
+                }
+                continue
+              }
+
+              // 查询用户信息
+              try {
+                const userRes = await getUserDetail(member.userId)
+                if (userRes.code === 200 && userRes.data) {
+                  // 缓存用户信息
+                  userCache.set(member.userId, userRes.data)
+                  memberMap[member.userId] = {
+                    senderName: member.nickname || userRes.data.nickname || userRes.data.username || '未知用户',
+                    senderAvatar: userRes.data.avatar || null
+                  }
+                } else {
+                  memberMap[member.userId] = {
+                    senderName: member.nickname || '未知用户',
+                    senderAvatar: null
+                  }
+                }
+              } catch (e) {
+                console.warn('获取用户信息失败:', member.userId, e)
+                memberMap[member.userId] = {
+                  senderName: member.nickname || '未知用户',
+                  senderAvatar: null
+                }
+              }
+            }
+
+            // 为每条消息填充senderName、senderAvatar和replySenderName
+            newMessages = newMessages.map(msg => {
+              // 查找被回复消息的发送者
+              let replySenderName = '未知用户'
+              if (msg.replyMessageId) {
+                // 在当前消息列表中查找被回复的消息
+                const repliedMsg = newMessages.find(m => m.id === msg.replyMessageId)
+                if (repliedMsg) {
+                  replySenderName = repliedMsg.senderName || memberMap[repliedMsg.senderId]?.senderName || '未知用户'
+                }
+              }
+
+              return {
+                ...msg,
+                senderName: msg.senderName || memberMap[msg.senderId]?.senderName || '未知用户',
+                senderAvatar: msg.senderAvatar || memberMap[msg.senderId]?.senderAvatar || null,
+                replySenderName
+              }
+            })
+          }
+        } catch (e) {
+          console.warn('获取会话成员信息失败:', e)
+        }
+
         if (isRefresh) {
           messages.value = newMessages.reverse()
         } else {
@@ -143,9 +214,16 @@ export const useChatStore = defineStore('chat', () => {
 
   // 处理新消息
   const handleNewMessage = (message) => {
+    // 为新消息填充senderName和senderAvatar
+    const enhancedMessage = {
+      ...message,
+      senderName: message.senderName || '未知用户',
+      senderAvatar: message.senderAvatar || null
+    }
+
     // 如果是当前会话的消息，添加到消息列表
     if (currentConversation.value && message.conversationId === currentConversation.value.id) {
-      messages.value.push(message)
+      messages.value.push(enhancedMessage)
     }
     // 更新会话列表
     const conv = conversations.value.find(c => c.id === message.conversationId)
@@ -165,7 +243,7 @@ export const useChatStore = defineStore('chat', () => {
       })
     } else {
       // 新会话
-      conversations.value.unshift(message)
+      conversations.value.unshift(enhancedMessage)
       // 重新排序
       conversations.value.sort((a, b) => {
         // 置顶优先
