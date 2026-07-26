@@ -89,4 +89,9 @@ public interface ConversationService {
      * 更新成员角色
      */
     void updateMemberRole(Long conversationId, Long userId, Integer role);
+
+    /**
+     * 退出会话
+     */
+    void exitConversation(Long conversationId, Long userId);
 }

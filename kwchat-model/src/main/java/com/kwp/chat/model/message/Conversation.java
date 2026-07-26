@@ -87,4 +87,10 @@ public class Conversation extends BaseEntity {
      */
     @TableField("is_top")
     private Integer isTop;
+
+    /**
+     * 未读消息数（非数据库字段，从ConversationMember表获取）
+     */
+    @TableField(exist = false)
+    private Integer unreadCount;
 }

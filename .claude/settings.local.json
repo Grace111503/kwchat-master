@@ -67,7 +67,8 @@
       "Bash(curl -s http://localhost:8080/api/conversation/list -H \"Authorization: Bearer test\")",
       "Bash(mvn compile *)",
       "WebFetch(domain:github.com)",
-      "Bash(git ls-tree *)"
+      "Bash(git ls-tree *)",
+      "Bash(grep *)"
     ]
   }
 }

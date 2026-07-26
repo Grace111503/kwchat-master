@@ -165,6 +165,15 @@ public class ConversationController {
         return Result.success();
     }
 
+    @Operation(summary = "退出会话")
+    @PostMapping("/{conversationId}/exit")
+    public Result<Void> exitConversation(HttpServletRequest request,
+                                         @PathVariable Long conversationId) {
+        Long userId = getCurrentUserId(request);
+        conversationService.exitConversation(conversationId, userId);
+        return Result.success();
+    }
+
     /**
      * 获取当前用户ID
      */

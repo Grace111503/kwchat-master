@@ -33,10 +33,18 @@ public class ConversationServiceImpl implements ConversationService {
     @Override
     public List<Conversation> getConversationList(Long userId) {
         List<Conversation> conversations = conversationMapper.selectByUserId(userId);
-        // 为单聊会话填充对方昵称
+        // 为每个会话填充信息
         for (Conversation conversation : conversations) {
+            // 为单聊会话填充对方昵称
             if (CommonConstant.CONVERSATION_TYPE_PRIVATE.equals(conversation.getConversationType())) {
                 fillPrivateConversationName(conversation, userId);
+            }
+            // 填充未读消息数
+            ConversationMember member = conversationMemberMapper.selectByConversationIdAndUserId(conversation.getId(), userId);
+            if (member != null) {
+                conversation.setUnreadCount(member.getUnreadCount());
+            } else {
+                conversation.setUnreadCount(0);
             }
         }
         return conversations;
@@ -277,6 +285,33 @@ public class ConversationServiceImpl implements ConversationService {
         }
         member.setRole(role);
         conversationMemberMapper.updateById(member);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void exitConversation(Long conversationId, Long userId) {
+        Conversation conversation = conversationMapper.selectById(conversationId);
+        if (conversation == null) {
+            throw new BusinessException(ResultCode.CONVERSATION_NOT_FOUND);
+        }
+
+        ConversationMember member = conversationMemberMapper.selectByConversationIdAndUserId(conversationId, userId);
+        if (member == null) {
+            throw new BusinessException(ResultCode.GROUP_MEMBER_NOT_FOUND);
+        }
+
+        // 单聊：软删除成员记录（隐藏会话）
+        // 群聊：检查是否是群主（群主不能退出，只能解散）
+        if (CommonConstant.CONVERSATION_TYPE_GROUP.equals(conversation.getConversationType())) {
+            if (CommonConstant.GROUP_ROLE_OWNER.equals(member.getRole())) {
+                throw new BusinessException(ResultCode.NOT_GROUP_OWNER);
+            }
+        }
+
+        // 使用MyBatis-Plus的逻辑删除
+        conversationMemberMapper.deleteById(member.getId());
+
+        log.info("用户已退出会话: conversationId={}, userId={}", conversationId, userId);
     }
 
     /**

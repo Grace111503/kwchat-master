@@ -214,8 +214,9 @@ public class MessageServiceImpl implements MessageService {
             throw new BusinessException(ResultCode.FORBIDDEN);
         }
 
-        // 软删除
+        // 设置status=2（已删除）和deleted=1（逻辑删除）
         message.setStatus(2);
+        message.setDeleted(1);
         messageMapper.updateById(message);
 
         log.info("消息已删除: messageId={}, userId={}", messageId, userId);

@@ -3,8 +3,17 @@
     <!-- 侧边栏 -->
     <div class="sidebar" :class="{ collapsed: isCollapsed }">
       <div class="sidebar-header">
-        <img src="@/assets/logo.png" alt="Logo" class="logo" v-if="!isCollapsed" />
-        <img src="@/assets/logo-mini.png" alt="Logo" class="logo-mini" v-else />
+        <div v-if="!isCollapsed" class="logo-full">
+          <svg viewBox="0 0 32 32" width="28" height="28" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="32" height="32" rx="8" fill="#409eff"/>
+            <text x="16" y="22" text-anchor="middle" font-size="18" font-weight="bold" fill="#fff" font-family="Arial">K</text>
+          </svg>
+          <span class="logo-text">KuaiTong</span>
+        </div>
+        <svg v-else viewBox="0 0 32 32" width="28" height="28" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="32" height="32" rx="8" fill="#409eff"/>
+          <text x="16" y="22" text-anchor="middle" font-size="18" font-weight="bold" fill="#fff" font-family="Arial">K</text>
+        </svg>
       </div>
 
       <el-menu
@@ -170,12 +179,17 @@ const handleCommand = async (command) => {
   justify-content: center;
   background: #2b2f3a;
 
-  .logo {
-    height: 32px;
-  }
+  .logo-full {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 
-  .logo-mini {
-    height: 32px;
+    .logo-text {
+      font-size: 18px;
+      font-weight: bold;
+      color: #fff;
+      white-space: nowrap;
+    }
   }
 }
 
