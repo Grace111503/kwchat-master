@@ -280,6 +280,29 @@ export const useChatStore = defineStore('chat', () => {
     unreadFriendRequests.value = 0
   }
 
+  // 移除会话（删除好友时调用）
+  const removeConversation = (conversationId) => {
+    const index = conversations.value.findIndex(c => c.id === conversationId)
+    if (index !== -1) {
+      conversations.value.splice(index, 1)
+      // 如果当前选中的会话被移除，清空当前会话
+      if (currentConversation.value?.id === conversationId) {
+        currentConversation.value = null
+        messages.value = []
+      }
+    }
+  }
+
+  // 根据用户ID查找并移除单聊会话
+  const removeConversationByUserId = (userId) => {
+    const conversation = conversations.value.find(c =>
+      c.conversationType === 1 && c.targetUserId === userId
+    )
+    if (conversation) {
+      removeConversation(conversation.id)
+    }
+  }
+
   return {
     conversations,
     currentConversation,
@@ -302,6 +325,8 @@ export const useChatStore = defineStore('chat', () => {
     handleReadReceipt,
     handleFriendRequestNotify,
     handleFriendRequestHandle,
-    clearUnreadFriendRequests
+    clearUnreadFriendRequests,
+    removeConversation,
+    removeConversationByUserId
   }
 })

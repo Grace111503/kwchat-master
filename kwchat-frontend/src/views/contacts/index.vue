@@ -415,13 +415,16 @@ const saveRemark = async () => {
 
 const deleteFriendAction = () => {
   if (!selectedContact.value) return
-  ElMessageBox.confirm('确定要删除该好友吗？', '系统提示', {
+  const friendId = selectedContact.value.id
+  ElMessageBox.confirm('确定要删除该好友吗？删除后将同时删除与该好友的聊天记录', '系统提示', {
     confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning'
   }).then(async () => {
     try {
-      const res = await deleteFriend(selectedContact.value.id)
+      const res = await deleteFriend(friendId)
       if (res.code === 200) {
         ElMessage.success('删除成功')
+        // 同时从会话列表中移除该好友的会话
+        chatStore.removeConversationByUserId(friendId)
         selectedContact.value = null
         loadFriends()
       }

@@ -60,9 +60,9 @@ public class FriendServiceImpl implements FriendService {
             throw new BusinessException(ResultCode.FRIEND_ALREADY_EXISTS);
         }
 
-        // 检查是否已发送过申请（任何状态）
-        FriendRequest existingRequest = friendRequestMapper.selectBySenderIdAndReceiverId(senderId, receiverId);
-        if (existingRequest != null) {
+        // 检查是否已发送过申请（只检查待处理的申请）
+        int pendingCount = friendRequestMapper.countPendingBySenderIdAndReceiverId(senderId, receiverId);
+        if (pendingCount > 0) {
             throw new BusinessException(ResultCode.FRIEND_REQUEST_ALREADY_SENT);
         }
 
@@ -154,6 +154,17 @@ public class FriendServiceImpl implements FriendService {
         Friend friend2 = friendMapper.selectByUserIdAndFriendId(friendId, userId);
         if (friend2 != null) {
             friendMapper.deleteById(friend2.getId());
+        }
+
+        // 删除单聊会话（隐藏会话，使用软删除）
+        try {
+            Conversation conversation = conversationService.getOrCreatePrivateConversation(userId, friendId);
+            conversationService.exitConversation(conversation.getId(), userId);
+            // 同时让对方也退出会话
+            conversationService.exitConversation(conversation.getId(), friendId);
+            log.info("已删除会话: userId={}, friendId={}, conversationId={}", userId, friendId, conversation.getId());
+        } catch (Exception e) {
+            log.error("删除会话失败: userId={}, friendId={}, error={}", userId, friendId, e.getMessage());
         }
 
         log.info("删除好友: userId={}, friendId={}", userId, friendId);
