@@ -1,5 +1,10 @@
 <template>
   <div class="message-bubble-wrapper" :class="{ 'is-self': isSelf, 'is-selected': isSelected }">
+    <!-- 多选勾选图标 -->
+    <div class="select-checkbox" v-if="isSelected">
+      <el-icon :size="16"><CircleCheck /></el-icon>
+    </div>
+
     <el-avatar
       :size="34"
       :src="message.senderAvatar"
@@ -355,6 +360,7 @@ const getReplyPreviewText = () => {
 <style lang="scss" scoped>
 .message-bubble-wrapper {
   display: flex;
+  position: relative;
   margin-bottom: 12px;
   padding: 0 16px;
   cursor: pointer;
@@ -365,10 +371,19 @@ const getReplyPreviewText = () => {
   }
 
   &.is-selected {
-    background: var(--bg-secondary);
+    background: #e6f4ff !important;
 
     .message-bubble {
       border-color: #2b7fff;
+      box-shadow: 0 0 0 1px #2b7fff;
+    }
+
+    .message-avatar {
+      box-shadow: 0 0 0 2px #2b7fff;
+    }
+
+    .select-checkbox {
+      display: flex;
     }
   }
 
@@ -411,6 +426,19 @@ const getReplyPreviewText = () => {
       opacity: 0.8;
     }
   }
+}
+
+.select-checkbox {
+  display: none;
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #2b7fff;
+  background: white;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  z-index: 10;
 }
 
 .message-content {

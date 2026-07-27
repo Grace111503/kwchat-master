@@ -243,7 +243,7 @@ import { useChatStore } from '@/store/chat'
 import { ElMessage } from 'element-plus'
 import { uploadImage, uploadFile, uploadVideo } from '@/api/file'
 import { getConversationMembers } from '@/api/conversation'
-import { recallMessage, deleteMessage } from '@/api/message'
+import { recallMessage, deleteMessage, favoriteMessage } from '@/api/message'
 import websocketManager from '@/utils/websocket'
 import ConversationItem from '@/components/chat/ConversationItem.vue'
 import MessageBubble from '@/components/chat/MessageBubble.vue'
@@ -646,8 +646,24 @@ const batchFavoriteMessages = async () => {
       type: 'info'
     })
 
-    // TODO: 调用收藏 API
-    ElMessage.success(`已收藏 ${selectedMessages.value.length} 条消息`)
+    // 逐个调用收藏 API
+    let successCount = 0
+    let failCount = 0
+    for (const message of selectedMessages.value) {
+      try {
+        await favoriteMessage(message.id)
+        successCount++
+      } catch (e) {
+        console.error('收藏失败:', e)
+        failCount++
+      }
+    }
+
+    if (failCount === 0) {
+      ElMessage.success(`已收藏 ${successCount} 条消息`)
+    } else {
+      ElMessage.warning(`收藏完成：成功 ${successCount} 条，失败 ${failCount} 条`)
+    }
     cancelMultiSelect()
   } catch (error) {
     if (error !== 'cancel') {
