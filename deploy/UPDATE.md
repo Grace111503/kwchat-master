@@ -12,15 +12,15 @@
 cd D:\KuaiTong\kwchat
 git add .
 git commit -m "更新说明"
-git push origin main
+git push origin master
 ```
 
 ### 2. 服务器拉取最新代码
 
 ```bash
 ssh root@<服务器IP>
-cd /opt/kwchat/kwchat-master
-git pull origin main
+cd /opt/kwchat
+git pull origin master
 ```
 
 ### 3. 根据改动类型重新构建
@@ -69,8 +69,8 @@ sudo systemctl restart kwchat
 
 ```bash
 #!/bin/bash
-cd /opt/kwchat/kwchat-master
-git pull origin main
+cd /opt/kwchat
+git pull origin master
 
 # 前端
 cd /opt/kwchat/kwchat-frontend && npm run build
@@ -104,14 +104,14 @@ chmod +x update.sh
 A: 本地有修改，先暂存再拉取：
 ```bash
 git stash
-git pull origin main
+git pull origin master
 git stash pop  # 如果需要恢复本地修改
 ```
 
 **Q: git pull 报错 `fatal: refusing to merge unrelated histories`？**
 A: 执行：
 ```bash
-git pull origin main --allow-unrelated-histories
+git pull origin master --allow-unrelated-histories
 ```
 
 **Q: 前端构建后页面没变化？**
