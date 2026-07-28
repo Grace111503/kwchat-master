@@ -55,6 +55,10 @@ public class FileServiceImpl implements FileService {
         // 验证文件
         validateFile(file);
 
+        // 记录详细的上传信息用于调试
+        log.info("开始上传文件: fileName={}, contentType={}, size={}, directory={}",
+                file.getOriginalFilename(), file.getContentType(), file.getSize(), directory);
+
         try {
             // 生成唯一文件名
             String originalFileName = file.getOriginalFilename();
@@ -63,6 +67,8 @@ public class FileServiceImpl implements FileService {
 
             // 构建文件路径
             String filePath = directory + fileName;
+
+            log.info("文件路径: filePath={}, MinIO endpoint={}", filePath, minioConfig.getEndpoint());
 
             // 上传到MinIO
             String fileUrl = minioUtils.uploadFile(file.getInputStream(), filePath, file.getContentType(), file.getSize());
@@ -78,8 +84,15 @@ public class FileServiceImpl implements FileService {
                     .filePath(filePath)
                     .build();
         } catch (Exception e) {
-            log.error("文件上传失败: {}", e.getMessage(), e);
-            throw new BusinessException(ResultCode.FILE_UPLOAD_FAILED);
+            log.error("文件上传失败: fileName={}, error={}", file.getOriginalFilename(), e.getMessage(), e);
+            // 提供更详细的错误信息
+            if (e.getMessage().contains("Connection refused") || e.getMessage().contains("connect")) {
+                throw new BusinessException(ResultCode.FILE_UPLOAD_FAILED, "文件存储服务连接失败，请检查MinIO服务是否正常运行");
+            } else if (e.getMessage().contains("timeout")) {
+                throw new BusinessException(ResultCode.FILE_UPLOAD_FAILED, "文件存储服务连接超时");
+            } else {
+                throw new BusinessException(ResultCode.FILE_UPLOAD_FAILED, "文件上传失败: " + e.getMessage());
+            }
         }
     }
 

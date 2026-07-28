@@ -5,6 +5,7 @@ import com.kwp.chat.common.constant.CommonConstant;
 import com.kwp.chat.common.exception.BusinessException;
 import com.kwp.chat.common.result.ResultCode;
 import com.kwp.chat.common.utils.JwtUtils;
+import com.kwp.chat.common.utils.MinioUtils;
 import com.kwp.chat.common.utils.RedisUtils;
 import com.kwp.chat.dao.UserMapper;
 import com.kwp.chat.model.dto.*;
@@ -37,6 +38,7 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtils jwtUtils;
     private final RedisUtils redisUtils;
+    private final MinioUtils minioUtils;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -237,26 +239,9 @@ public class UserServiceImpl implements UserService {
 
         try {
             // 生成唯一文件名
-            String originalFileName = file.getOriginalFilename();
-            String extension = "";
-            if (originalFileName != null && originalFileName.contains(".")) {
-                extension = originalFileName.substring(originalFileName.lastIndexOf("."));
-            }
-            String fileName = UUID.randomUUID().toString().replace("-", "") + extension;
-
-            // 获取项目根目录下的 upload/avatar 目录
-            String uploadDir = System.getProperty("user.dir") + File.separator + "upload" + File.separator + "avatar" + File.separator;
-            File dir = new File(uploadDir);
-            if (!dir.exists()) {
-                dir.mkdirs();
-            }
-
-            // 保存文件
-            File targetFile = new File(uploadDir + fileName);
-            file.transferTo(targetFile);
-
-            // 构建访问URL
-            String avatarUrl = "/api/file/avatar/" + fileName;
+            // 使用 MinIO 存储头像
+            String fileName = "avatar/" + UUID.randomUUID().toString().replace("-", "") + getFileExtension(file.getOriginalFilename());
+            String avatarUrl = minioUtils.uploadFile(file.getInputStream(), fileName, file.getContentType(), file.getSize());
 
             // 更新用户头像URL
             user.setAvatar(avatarUrl);
@@ -341,5 +326,19 @@ public class UserServiceImpl implements UserService {
         UserInfoResponse response = new UserInfoResponse();
         BeanUtils.copyProperties(user, response);
         return response;
+    }
+
+    /**
+     * 获取文件扩展名
+     */
+    private String getFileExtension(String fileName) {
+        if (!StringUtils.hasText(fileName)) {
+            return "";
+        }
+        int lastDotIndex = fileName.lastIndexOf('.');
+        if (lastDotIndex >= 0) {
+            return fileName.substring(lastDotIndex);
+        }
+        return "";
     }
 }

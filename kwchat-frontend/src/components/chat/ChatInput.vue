@@ -248,7 +248,12 @@ const startVoiceRecord = async () => {
   try {
     // 检查浏览器支持
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      ElMessage.error('您的浏览器不支持录音功能')
+      // 检查是否是因为非 HTTPS 环境
+      if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+        ElMessage.error('录音功能需要 HTTPS 环境，请使用 HTTPS 访问或联系管理员配置 SSL 证书')
+      } else {
+        ElMessage.error('您的浏览器不支持录音功能')
+      }
       return
     }
 

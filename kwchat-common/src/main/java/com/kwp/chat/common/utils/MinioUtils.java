@@ -63,7 +63,7 @@ public class MinioUtils {
                     .stream(file.getInputStream(), file.getSize(), -1)
                     .contentType(file.getContentType())
                     .build());
-            return getPresignedUrl(objectName);
+            return getFileUrl(objectName);
         } catch (Exception e) {
             log.error("上传文件失败: {}", e.getMessage());
             throw new RuntimeException("上传文件失败");
@@ -82,7 +82,7 @@ public class MinioUtils {
                     .stream(inputStream, size, -1)
                     .contentType(contentType)
                     .build());
-            return getPresignedUrl(objectName);
+            return getFileUrl(objectName);
         } catch (Exception e) {
             log.error("上传文件失败: {}", e.getMessage());
             throw new RuntimeException("上传文件失败");

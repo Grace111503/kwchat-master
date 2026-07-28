@@ -1,6 +1,8 @@
 package com.kwp.chat.api.controller;
 
+import com.kwp.chat.common.config.MinioConfig;
 import com.kwp.chat.common.result.Result;
+import com.kwp.chat.common.utils.MinioUtils;
 import com.kwp.chat.model.dto.FileUploadResponse;
 import com.kwp.chat.service.FileService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -14,6 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.OutputStream;
+import java.util.Map;
 
 /**
  * 文件控制器
@@ -25,6 +28,8 @@ import java.io.OutputStream;
 public class FileController {
 
     private final FileService fileService;
+    private final MinioUtils minioUtils;
+    private final MinioConfig minioConfig;
 
     @Operation(summary = "上传图片")
     @PostMapping("/image")
@@ -110,6 +115,27 @@ public class FileController {
             }
         } catch (Exception e) {
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @Operation(summary = "检查MinIO连接状态")
+    @GetMapping("/minio-status")
+    public Result<Map<String, Object>> checkMinioStatus() {
+        Map<String, Object> status = new java.util.HashMap<>();
+        try {
+            // 检查bucket是否存在
+            boolean bucketExists = minioUtils.bucketExists(minioConfig.getBucketName());
+            status.put("bucketExists", bucketExists);
+            status.put("endpoint", minioConfig.getEndpoint());
+            status.put("bucketName", minioConfig.getBucketName());
+            status.put("url", minioConfig.getUrl());
+            status.put("status", "connected");
+            return Result.success(status);
+        } catch (Exception e) {
+            status.put("status", "error");
+            status.put("error", e.getMessage());
+            status.put("endpoint", minioConfig.getEndpoint());
+            return Result.success(status);
         }
     }
 
