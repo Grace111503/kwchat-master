@@ -55,7 +55,7 @@ node -v && npm -v
 sudo yum install -y git nginx
 ```
 
-### 1.7 配置防火墙
+### 1.7 配置防火墙和安全组
 
 ```bash
 # 开放端口（或在腾讯云安全组放行）
@@ -63,6 +63,20 @@ sudo firewall-cmd --permanent --add-port=80/tcp
 sudo firewall-cmd --permanent --add-port=443/tcp
 sudo firewall-cmd --reload
 ```
+
+**⚠️ 腾讯云安全组配置（重要）：**
+
+登录腾讯云控制台 → 云服务器 → 安全组，添加以下入站规则：
+
+| 端口 | 协议 | 用途 | 是否必须 |
+|------|------|------|----------|
+| 22 | TCP | SSH登录 | ✅ 必须 |
+| 80 | TCP | HTTP (Nginx) | ✅ 必须 |
+| 443 | TCP | HTTPS (可选) | ⚪ 可选 |
+| 9001 | TCP | MinIO控制台 | ⚪ 可选（管理文件用） |
+| 15672 | TCP | RabbitMQ管理 | ⚪ 可选（调试用） |
+
+> **注意**：MySQL(3307)、Redis(6379)、MinIO(9000)、RabbitMQ(5672)、Elasticsearch(9200) 等端口**不需要对外暴露**，因为都在Docker内网中，通过localhost访问。
 
 ---
 
@@ -128,9 +142,12 @@ docker stop kwchat-prometheus kwchat-grafana
 | Prometheus | 9090 | ❌ 已关闭 |
 | Grafana | 3001 | ❌ 已关闭 |
 
-### 3.3 初始化 MinIO Bucket
+### 3.3 创建文件存储目录
 
-浏览器访问 `http://<服务器IP>:9001`，用 `minioadmin` / `minioadmin123` 登录，创建 bucket：`kuaitong`
+```bash
+# 创建本地文件存储目录（代替MinIO，节省内存）
+mkdir -p /opt/kwchat/uploads/{image,video,voice,avatar,file}
+```
 
 ### 3.4 验证 MySQL 初始化
 
@@ -142,39 +159,49 @@ docker exec -it kwchat-mysql mysql -uroot -proot123456 -e "USE kuaitong; SHOW TA
 
 ## 四、修改后端配置
 
-### 4.1 密码对齐
+### 4.1 密码确认（已正确，无需修改）
 
-`docker-compose.yml` 中的密码和 `application.yml` 不一致，需要改 `application.yml` 去匹配：
+`docker-compose.yml` 和 `application.yml` 中的密码已经一致，**不需要修改**：
 
-| 服务 | docker-compose.yml | application.yml（原始） | application.yml（改为） |
-|------|-------------------|------------------------|----------------------|
-| MySQL root | `root123456` | `root` | `root123456` |
-| Redis | `redis123` | `123456` | `redis123` |
-| RabbitMQ | `dev_admin` / `123456` | `dev_admin` / `123456` | 不用改 ✅ |
-| MinIO | `minioadmin` / `minioadmin123` | `minioadmin` / `minioadmin123` | 不用改 ✅ |
+| 服务 | docker-compose.yml | application.yml | 状态 |
+|------|-------------------|-----------------|------|
+| MySQL root | `root123456` | `root123456` | ✅ 已一致 |
+| Redis | `redis123` | `redis123` | ✅ 已一致 |
+| RabbitMQ | `dev_admin` / `123456` | `dev_admin` / `123456` | ✅ 已一致 |
+| MinIO | `minioadmin` / `minioadmin123` | `minioadmin` / `minioadmin123` | ✅ 已一致 |
 
-编辑 `kwchat-app/src/main/resources/application.yml`，找到以下 3 处并修改：
+### 4.2 修改生产环境配置
+
+编辑 `kwchat-app/src/main/resources/application.yml`，修改以下内容：
 
 ```yaml
-# 1. MySQL 密码（约第18行）
-spring.datasource.password: root123456    # 原来是 root
+# 1. 切换为生产环境（约第10行）
+spring.profiles.active: prod              # 原来是 dev
 
-# 2. Redis 密码（约第52行）
-spring.data.redis.password: redis123      # 原来是 123456
-
-# 3. 关闭 SQL 日志、DEBUG 日志（省内存）
-# 删掉或注释掉 StdOutImpl 那行：
+# 2. 关闭 SQL 日志、DEBUG 日志（省内存）
+# 删掉或注释掉 StdOutImpl 那行（约第136行）：
 #   log-impl: org.apache.ibatis.logging.stdout.StdOutImpl    ← 删掉这行
 
-# 4. 日志级别改为 INFO（约第162行）
+# 3. 日志级别改为 INFO（约第162行）
 logging.level.com.kwp.chat: INFO         # 原来是 DEBUG
 logging.level.org.springframework.web: INFO  # 原来是 DEBUG
 
-# 5. 关闭 Knife4j API 文档（约第157行）
+# 4. 关闭 Knife4j API 文档（约第157行）
 knife4j.enable: false                     # 原来是 true
+
+# 5. 本地文件存储路径（约第154行）
+file.storage.local.path: /opt/kwchat/uploads  # 原来是 Windows 路径
 ```
 
-### 4.2 其他优化配置（可选但建议）
+### 4.3 前端配置确认
+
+编辑 `kwchat-frontend/.env.production`，确认 WebSocket 地址：
+
+```bash
+VITE_WS_URL=ws://118.25.44.250/ws   # 替换为你的服务器IP
+```
+
+### 4.3 其他优化配置（可选但建议）
 
 ```yaml
 # Netty WebSocket 配置保持不变
@@ -203,8 +230,9 @@ mvn clean package -DskipTests -pl kwchat-app -am
 ### 5.2 启动后端
 
 ```bash
-# 创建日志目录
+# 创建日志目录和文件存储目录
 mkdir -p /opt/kwchat/logs
+mkdir -p /opt/kwchat/uploads/{image,video,voice,avatar,file}
 
 # 启动（JVM 内存针对 4G 优化）
 nohup java -Xms256m -Xmx512m -XX:+UseG1GC \
@@ -224,7 +252,11 @@ tail -f /opt/kwchat/logs/kwchat.log
 ### 5.3 创建开机自启（可选）
 
 ```bash
-sudo tee /etc/systemd/system/kwchat.service << 'EOF'
+# 先确认JVM路径
+JAVA_PATH=$(dirname $(dirname $(readlink -f $(which java))))
+echo "JVM路径: $JAVA_PATH"
+
+sudo tee /etc/systemd/system/kwchat.service << EOF
 [Unit]
 Description=KWChat Backend
 After=network.target docker.service
@@ -233,7 +265,7 @@ Requires=docker.service
 [Service]
 Type=simple
 WorkingDirectory=/opt/kwchat
-ExecStart=/usr/lib/jvm/java-17-openjdk/bin/java -Xms256m -Xmx512m -XX:+UseG1GC -jar /opt/kwchat/kwchat-app/target/kwchat-app-1.0.0-SNAPSHOT.jar
+ExecStart=$JAVA_PATH/bin/java -Xms256m -Xmx512m -XX:+UseG1GC -jar /opt/kwchat/kwchat-app/target/kwchat-app-1.0.0-SNAPSHOT.jar
 Restart=always
 RestartSec=10
 StandardOutput=append:/opt/kwchat/logs/kwchat.log
@@ -318,6 +350,17 @@ server {
         proxy_read_timeout 3600s;
         proxy_send_timeout 3600s;
     }
+
+    # 静态资源（上传的文件）
+    location /uploads/ {
+        alias /opt/kwchat/uploads/;
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+        # 允许跨域
+        add_header Access-Control-Allow-Origin *;
+        add_header Access-Control-Allow-Methods "GET, POST, OPTIONS";
+        add_header Access-Control-Allow-Headers "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range";
+    }
 }
 NGINX_EOF
 ```
@@ -393,6 +436,15 @@ A: 检查密码是否对齐：`docker exec -it kwchat-mysql mysql -uroot -proot1
 **Q: 重启服务器后服务没了？**
 A: Docker 已设置 `restart: always`，会自动重启。后端需要配置 systemd 自启（见 5.3 节）。
 
+**Q: MinIO上传文件报错？**
+A: 检查MinIO bucket是否创建：访问 `http://<服务器IP>:9001`，用 `minioadmin`/`minioadmin123` 登录，确保 `kuaitong` bucket存在。
+
+**Q: Elasticsearch启动失败？**
+A: 4G内存可能不够，可以关闭ES：`docker stop kwchat-elasticsearch kwchat-kibana`
+
+**Q: 如何查看后端日志？**
+A: `tail -f /opt/kwchat/logs/kwchat.log` 或 `docker logs kwchat-mysql`
+
 ---
 
 ## 快速部署命令汇总
@@ -416,13 +468,18 @@ cd /opt && git clone <仓库地址> kwchat
 cd /opt/kwchat/docker && docker compose up -d
 docker stop kwchat-prometheus kwchat-grafana
 
-# 6. 改 application.yml 密码对齐（MySQL→root123456, Redis→redis123）
+# 6. 确认 application.yml 密码（已正确，无需修改）
+# MySQL→root123456, Redis→redis123, 但需要改：
+#   - spring.profiles.active: prod
+#   - 删除 log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+#   - 日志级别改为 INFO
 
 # 7. 构建后端
 cd /opt/kwchat && mvn clean package -DskipTests -pl kwchat-app -am
 
 # 8. 启动后端
 mkdir -p /opt/kwchat/logs
+mkdir -p /opt/kwchat/uploads/{image,video,voice,avatar,file}
 nohup java -Xms256m -Xmx512m -XX:+UseG1GC -jar kwchat-app/target/kwchat-app-1.0.0-SNAPSHOT.jar > /opt/kwchat/logs/kwchat.log 2>&1 &
 
 # 9. 构建前端

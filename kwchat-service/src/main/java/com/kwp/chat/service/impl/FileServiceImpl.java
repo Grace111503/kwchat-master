@@ -4,11 +4,13 @@ import com.kwp.chat.common.config.MinioConfig;
 import com.kwp.chat.common.constant.CommonConstant;
 import com.kwp.chat.common.exception.BusinessException;
 import com.kwp.chat.common.result.ResultCode;
+import com.kwp.chat.common.utils.LocalStorageUtils;
 import com.kwp.chat.common.utils.MinioUtils;
 import com.kwp.chat.model.dto.FileUploadResponse;
 import com.kwp.chat.service.FileService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
@@ -28,6 +30,10 @@ public class FileServiceImpl implements FileService {
 
     private final MinioUtils minioUtils;
     private final MinioConfig minioConfig;
+    private final LocalStorageUtils localStorageUtils;
+
+    @Value("${file.storage.type:minio}")
+    private String storageType;
 
     /**
      * 允许的图片类型
@@ -56,8 +62,8 @@ public class FileServiceImpl implements FileService {
         validateFile(file);
 
         // 记录详细的上传信息用于调试
-        log.info("开始上传文件: fileName={}, contentType={}, size={}, directory={}",
-                file.getOriginalFilename(), file.getContentType(), file.getSize(), directory);
+        log.info("开始上传文件: fileName={}, contentType={}, size={}, directory={}, storageType={}",
+                file.getOriginalFilename(), file.getContentType(), file.getSize(), directory, storageType);
 
         try {
             // 生成唯一文件名
@@ -68,10 +74,16 @@ public class FileServiceImpl implements FileService {
             // 构建文件路径
             String filePath = directory + fileName;
 
-            log.info("文件路径: filePath={}, MinIO endpoint={}", filePath, minioConfig.getEndpoint());
-
-            // 上传到MinIO
-            String fileUrl = minioUtils.uploadFile(file.getInputStream(), filePath, file.getContentType(), file.getSize());
+            String fileUrl;
+            if ("local".equals(storageType)) {
+                // 使用本地存储
+                log.info("使用本地存储: filePath={}", filePath);
+                fileUrl = localStorageUtils.uploadFile(file.getInputStream(), filePath, file.getContentType(), file.getSize());
+            } else {
+                // 使用MinIO存储
+                log.info("使用MinIO存储: filePath={}, endpoint={}", filePath, minioConfig.getEndpoint());
+                fileUrl = minioUtils.uploadFile(file.getInputStream(), filePath, file.getContentType(), file.getSize());
+            }
 
             log.info("文件上传成功: fileName={}, size={}, url={}", originalFileName, file.getSize(), fileUrl);
 
@@ -173,7 +185,11 @@ public class FileServiceImpl implements FileService {
     @Override
     public void deleteFile(String filePath) {
         try {
-            minioUtils.deleteFile(filePath);
+            if ("local".equals(storageType)) {
+                localStorageUtils.deleteFile(filePath);
+            } else {
+                minioUtils.deleteFile(filePath);
+            }
             log.info("文件删除成功: filePath={}", filePath);
         } catch (Exception e) {
             log.error("文件删除失败: filePath={}, error={}", filePath, e.getMessage());
@@ -183,17 +199,29 @@ public class FileServiceImpl implements FileService {
 
     @Override
     public String getFileUrl(String filePath) {
-        return minioUtils.getFileUrl(filePath);
+        if ("local".equals(storageType)) {
+            return localStorageUtils.getFileUrl(filePath);
+        } else {
+            return minioUtils.getFileUrl(filePath);
+        }
     }
 
     @Override
     public String getPresignedUrl(String filePath) {
-        return minioUtils.getPresignedUrl(filePath);
+        if ("local".equals(storageType)) {
+            return localStorageUtils.getFileUrl(filePath);
+        } else {
+            return minioUtils.getPresignedUrl(filePath);
+        }
     }
 
     @Override
     public InputStream downloadFile(String filePath) {
-        return minioUtils.downloadFile(filePath);
+        if ("local".equals(storageType)) {
+            return localStorageUtils.downloadFile(filePath);
+        } else {
+            return minioUtils.downloadFile(filePath);
+        }
     }
 
     @Override

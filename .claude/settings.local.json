@@ -68,7 +68,14 @@
       "Bash(mvn compile *)",
       "WebFetch(domain:github.com)",
       "Bash(git ls-tree *)",
-      "Bash(grep *)"
+      "Bash(grep *)",
+      "Bash(ssh root@118.25.44.250 \"ps aux | grep kwchat; netstat -tlnp | grep -E '8080|9092'\")",
+      "Bash(cat)",
+      "Bash(chmod +x /tmp/fix_yaml.sh)",
+      "Read(//tmp/**)",
+      "Bash(ssh root@118.25.44.250 \"ls -la /opt/kwchat/\")",
+      "Bash(ssh *)",
+      "Bash(curl -I http://localhost:8080/uploads/image/2eb50296c0244a568965d76a656c7b72.jpg)"
     ]
   }
 }

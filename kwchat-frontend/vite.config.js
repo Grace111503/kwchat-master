@@ -35,6 +35,10 @@ export default defineConfig({
         target: 'ws://localhost:9092',
         ws: true,
         changeOrigin: true
+      },
+      '/uploads': {
+        target: 'http://localhost:8080/api',
+        changeOrigin: true
       }
     }
   },

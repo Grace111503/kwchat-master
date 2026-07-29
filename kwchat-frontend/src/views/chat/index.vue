@@ -514,8 +514,23 @@ const typingText = computed(() => {
 const handlePlayVoice = (message) => {
   // 语音播放已在 MessageBubble 中处理
 }
-const handleDownload = (message) => { if (message.fileUrl) window.open(message.fileUrl, '_blank') }
-const handlePlayVideo = (message) => { if (message.fileUrl) window.open(message.fileUrl, '_blank') }
+
+/**
+ * 获取文件URL，兼容旧的MinIO格式
+ */
+const getFileUrl = (url) => {
+  if (!url) return ''
+  if (url.startsWith('/')) return url
+  const minioPattern = /https?:\/\/[^/]+:\d+\/[^/]+\/(.+)/
+  const match = url.match(minioPattern)
+  if (match) {
+    return '/uploads/' + match[1]
+  }
+  return url
+}
+
+const handleDownload = (message) => { if (message.fileUrl) window.open(getFileUrl(message.fileUrl), '_blank') }
+const handlePlayVideo = (message) => { if (message.fileUrl) window.open(getFileUrl(message.fileUrl), '_blank') }
 
 const handleRecallMessage = async (message) => {
   try {

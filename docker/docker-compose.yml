@@ -41,23 +41,24 @@ services:
     networks:
       - kwchat-network
 
-  # MinIO
-  minio:
-    image: minio/minio:latest
-    container_name: kwchat-minio
-    restart: always
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-    environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin123
-      TZ: Asia/Shanghai
-    volumes:
-      - minio_data:/data
-    command: server /data --console-address ":9001"
-    networks:
-      - kwchat-network
+  # MinIO（暂时关闭，节省内存，改用Nginx管理静态资源）
+  # 后续内存充足时可取消注释启用
+  # minio:
+  #   image: minio/minio:latest
+  #   container_name: kwchat-minio
+  #   restart: always
+  #   ports:
+  #     - "9000:9000"
+  #     - "9001:9001"
+  #   environment:
+  #     MINIO_ROOT_USER: minioadmin
+  #     MINIO_ROOT_PASSWORD: minioadmin123
+  #     TZ: Asia/Shanghai
+  #   volumes:
+  #     - minio_data:/data
+  #   command: server /data --console-address ":9001"
+  #   networks:
+  #     - kwchat-network
 
   # RabbitMQ
   rabbitmq:

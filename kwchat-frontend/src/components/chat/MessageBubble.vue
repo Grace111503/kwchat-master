@@ -37,8 +37,8 @@
         <!-- 图片消息 -->
         <template v-else-if="message.messageType === 2">
           <el-image
-            :src="message.fileUrl"
-            :preview-src-list="[message.fileUrl]"
+            :src="getFileUrl(message.fileUrl)"
+            :preview-src-list="[getFileUrl(message.fileUrl)]"
             class="message-image"
             fit="cover"
           >
@@ -67,7 +67,7 @@
         <template v-else-if="message.messageType === 4">
           <div class="message-video-wrapper">
             <video
-              :src="message.fileUrl"
+              :src="getFileUrl(message.fileUrl)"
               class="message-video"
               controls
               preload="metadata"
@@ -197,6 +197,33 @@ const formatText = (text) => {
   return text
 }
 
+/**
+ * 获取文件URL，兼容旧的MinIO格式
+ * 旧格式：http://118.25.44.250:9000/kuaitong/image/xxx.jpg?X-Amz-...
+ * 新格式：/uploads/image/xxx.jpg
+ */
+const getFileUrl = (url) => {
+  if (!url) return ''
+
+  // 如果已经是相对路径（以/开头），直接返回
+  if (url.startsWith('/')) {
+    return url
+  }
+
+  // 如果是旧的MinIO格式，转换为本地路径
+  // 匹配：http://IP:9000/kuaitong/xxx 或 http://IP:9000/bucket/xxx
+  const minioPattern = /https?:\/\/[^/]+:\d+\/[^/]+\/([^?]+)/
+  const match = url.match(minioPattern)
+  if (match) {
+    const path = match[1]  // 不包含查询参数
+    console.log('转换MinIO URL:', url, '->', '/uploads/' + path)
+    return '/uploads/' + path
+  }
+
+  // 其他情况直接返回
+  return url
+}
+
 const formatTime = (time) => {
   if (!time) return ''
   const date = dayjs(time)
@@ -234,11 +261,12 @@ const playVoice = async () => {
     return
   }
 
-  console.log('尝试播放语音:', props.message.fileUrl)
+  const voiceUrl = getFileUrl(props.message.fileUrl)
+  console.log('尝试播放语音:', voiceUrl)
 
   try {
     // 获取音频文件并创建 blob URL
-    const response = await fetch(props.message.fileUrl)
+    const response = await fetch(voiceUrl)
     console.log('响应状态:', response.status, response.headers.get('content-type'))
 
     if (!response.ok) throw new Error('文件获取失败: ' + response.status)
@@ -338,9 +366,10 @@ const handleTranslateMessage = (message) => {
 // 下载语音
 const downloadVoice = () => {
   if (!props.message.fileUrl) return
+  const voiceUrl = getFileUrl(props.message.fileUrl)
   // 创建下载链接
   const link = document.createElement('a')
-  link.href = props.message.fileUrl
+  link.href = voiceUrl
   link.download = `voice_${props.message.id}.audio`
   link.target = '_blank'
   document.body.appendChild(link)

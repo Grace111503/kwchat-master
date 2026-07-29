@@ -3,11 +3,14 @@ package com.kwp.chat.api.config;
 import com.kwp.chat.api.interceptor.AuthInterceptor;
 import com.kwp.chat.api.interceptor.PermissionInterceptor;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+import java.io.File;
 
 /**
  * Web MVC配置
@@ -19,6 +22,9 @@ public class WebMvcConfig implements WebMvcConfigurer {
     private final AuthInterceptor authInterceptor;
     private final PermissionInterceptor permissionInterceptor;
 
+    @Value("${file.storage.local.path:D:/KuaiTong/kwchat/uploads}")
+    private String uploadPath;
+
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         // 认证拦截器
@@ -29,6 +35,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/user/register",
                         "/user/refresh",
                         "/file/avatar/**",
+                        "/uploads/**",  // 静态资源不拦截
                         "/doc.html",
                         "/webjars/**",
                         "/v3/api-docs/**",
@@ -54,5 +61,17 @@ public class WebMvcConfig implements WebMvcConfigurer {
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         registry.addResourceHandler("/favicon.ico")
                 .addResourceLocations("classpath:/static/");
+
+        // 映射本地文件存储目录
+        // 确保路径以 / 结尾
+        String path = uploadPath;
+        if (!path.endsWith("/")) {
+            path = path + "/";
+        }
+        // Windows路径需要转换为URI格式 (file:///D:/path/)
+        path = path.replace("\\", "/");
+
+        registry.addResourceHandler("/uploads/**")
+                .addResourceLocations("file:///" + path);
     }
 }

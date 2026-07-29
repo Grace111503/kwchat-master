@@ -8,6 +8,9 @@ spring:
     name: kwchat
   profiles:
     active: dev
+  web:
+    resources:
+      static-locations: classpath:/static/,file:///D:/KuaiTong/kwchat/uploads/
 
   # 数据源配置
   datasource:
@@ -136,13 +139,23 @@ mybatis-plus:
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
     cache-enabled: false
 
-# MinIO配置
+# MinIO配置（暂时禁用，改用本地存储）
 minio:
   endpoint: http://localhost:9000
   access-key: minioadmin
   secret-key: minioadmin123
   bucket-name: kuaitong
-  url: http://118.25.44.250:9000
+  url: http://localhost:9000
+  enabled: false
+
+# 本地文件存储配置
+file:
+  storage:
+    type: local
+    local:
+      # Windows本地路径
+      path: D:/KuaiTong/kwchat/uploads
+      url-prefix: /uploads
 
 #Spring AI 配置(使用OpenAI兼容接口)
 
