@@ -203,8 +203,35 @@ export const useChatStore = defineStore('chat', () => {
         ...extra
       })
       if (res.code === 200) {
-        // 通过WebSocket发送
+        // 立即将消息添加到本地列表，让用户立即看到
+        const newMessage = {
+          id: res.data?.id || Date.now(), // 使用服务器返回的ID，如果没有则用时间戳
+          conversationId,
+          senderId: userStore.userInfo?.id,
+          senderName: userStore.userInfo?.nickname || userStore.userInfo?.username || '我',
+          senderAvatar: userStore.userInfo?.avatar,
+          messageType,
+          content,
+          createTime: new Date().toISOString(),
+          readStatus: 0,
+          ...extra
+        }
+        messages.value.push(newMessage)
+
+        // 更新会话列表的最后消息时间
         const conv = conversations.value.find(c => c.id === conversationId)
+        if (conv) {
+          conv.lastMessage = content || '[多媒体消息]'
+          conv.lastMessageTime = newMessage.createTime
+          // 重新排序：置顶优先，然后按最后消息时间排序
+          conversations.value.sort((a, b) => {
+            if (a.isTop && !b.isTop) return -1
+            if (!a.isTop && b.isTop) return 1
+            return new Date(b.lastMessageTime || 0) - new Date(a.lastMessageTime || 0)
+          })
+        }
+
+        // 通过WebSocket发送（用于通知其他用户）
         websocketManager.sendMessage(conversationId, conv?.targetUserId || null, messageType, content, extra)
       }
     } catch (error) {
