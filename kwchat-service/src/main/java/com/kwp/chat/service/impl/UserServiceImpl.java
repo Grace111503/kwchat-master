@@ -45,7 +45,6 @@ public class UserServiceImpl implements UserService {
 
     @Value("${file.storage.type:minio}")
     private String storageType;
-    private final MinioUtils minioUtils;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
