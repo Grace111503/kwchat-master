@@ -5,6 +5,7 @@ import com.kwp.chat.common.constant.CommonConstant;
 import com.kwp.chat.common.exception.BusinessException;
 import com.kwp.chat.common.result.ResultCode;
 import com.kwp.chat.common.utils.JwtUtils;
+import com.kwp.chat.common.utils.LocalStorageUtils;
 import com.kwp.chat.common.utils.MinioUtils;
 import com.kwp.chat.common.utils.RedisUtils;
 import com.kwp.chat.dao.UserMapper;
@@ -13,6 +14,7 @@ import com.kwp.chat.model.user.User;
 import com.kwp.chat.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.BeanUtils;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -38,6 +40,11 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtils jwtUtils;
     private final RedisUtils redisUtils;
+    private final LocalStorageUtils localStorageUtils;
+    private final MinioUtils minioUtils;
+
+    @Value("${file.storage.type:minio}")
+    private String storageType;
     private final MinioUtils minioUtils;
 
     @Override
@@ -239,9 +246,16 @@ public class UserServiceImpl implements UserService {
 
         try {
             // 生成唯一文件名
-            // 使用 MinIO 存储头像
             String fileName = "avatar/" + UUID.randomUUID().toString().replace("-", "") + getFileExtension(file.getOriginalFilename());
-            String avatarUrl = minioUtils.uploadFile(file.getInputStream(), fileName, file.getContentType(), file.getSize());
+
+            String avatarUrl;
+            if ("local".equals(storageType)) {
+                // 使用本地存储
+                avatarUrl = localStorageUtils.uploadFile(file.getInputStream(), fileName, file.getContentType(), file.getSize());
+            } else {
+                // 使用 MinIO 存储
+                avatarUrl = minioUtils.uploadFile(file.getInputStream(), fileName, file.getContentType(), file.getSize());
+            }
 
             // 更新用户头像URL
             user.setAvatar(avatarUrl);
