@@ -10,12 +10,15 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.OutputStream;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Map;
 
 /**
@@ -30,6 +33,9 @@ public class FileController {
     private final FileService fileService;
     private final MinioUtils minioUtils;
     private final MinioConfig minioConfig;
+
+    @Value("${file.storage.local.path:/opt/kwchat/uploads}")
+    private String uploadPath;
 
     @Operation(summary = "上传图片")
     @PostMapping("/image")
@@ -93,8 +99,9 @@ public class FileController {
     @GetMapping("/avatar/{fileName}")
     public void getAvatar(@PathVariable String fileName, HttpServletResponse response) {
         try {
-            String uploadDir = System.getProperty("user.dir") + File.separator + "upload" + File.separator + "avatar" + File.separator;
-            File file = new File(uploadDir + fileName);
+            // 使用配置的上传路径
+            Path filePath = Paths.get(uploadPath, "avatar", fileName);
+            File file = filePath.toFile();
             if (!file.exists()) {
                 response.setStatus(HttpServletResponse.SC_NOT_FOUND);
                 return;
