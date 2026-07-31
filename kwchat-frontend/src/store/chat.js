@@ -5,11 +5,13 @@ import { getMessageList, sendMessage as sendMessageApi, markConversationMessages
 import { getUserDetail } from '@/api/user'
 import websocketManager from '@/utils/websocket'
 import { getToken } from '@/utils/auth'
+import { useUserStore } from '@/store/user'
 
 // 用户信息缓存
 const userCache = new Map()
 
 export const useChatStore = defineStore('chat', () => {
+  const userStore = useUserStore()
   // 状态
   const conversations = ref([])
   const currentConversation = ref(null)
