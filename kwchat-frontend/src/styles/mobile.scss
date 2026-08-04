@@ -1,0 +1,442 @@
+/**
+ * 移动端通用样式
+ * 用于修复 Capacitor/移动端的兼容性问题
+ */
+
+// ==================== 安全区域 ====================
+
+// 安全区域变量（兼容性更好）
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+
+  // 底部导航栏高度
+  --bottom-nav-height: 56px;
+  --bottom-nav-total-height: calc(var(--bottom-nav-height) + var(--sab));
+}
+
+// ==================== 全局重置 ====================
+
+// 防止移动端页面弹跳
+html, body {
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+}
+
+// 禁止文本选择（移动端）
+.no-select {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+// ==================== 安全区域工具类 ====================
+
+.safe-area-top {
+  padding-top: var(--sat);
+}
+
+.safe-area-bottom {
+  padding-bottom: var(--sab);
+}
+
+.safe-area-left {
+  padding-left: var(--sal);
+}
+
+.safe-area-right {
+  padding-right: var(--sar);
+}
+
+// 完整安全区域
+.safe-area-all {
+  padding-top: var(--sat);
+  padding-bottom: var(--sab);
+  padding-left: var(--sal);
+  padding-right: var(--sar);
+}
+
+// ==================== 隐藏/显示工具类 ====================
+
+// 桌面端隐藏
+.hide-desktop {
+  @media (min-width: 769px) {
+    display: none !important;
+  }
+}
+
+// 移动端隐藏
+.hide-mobile {
+  @media (max-width: 768px) {
+    display: none !important;
+  }
+}
+
+// ==================== 触摸优化 ====================
+
+// 触摸反馈
+.touch-feedback {
+  -webkit-tap-highlight-color: transparent;
+
+  &:active {
+    opacity: 0.7;
+    transform: scale(0.98);
+  }
+}
+
+// 触摸列表项
+.touchable-item {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+
+  &:active {
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+}
+
+// ==================== 滚动优化 ====================
+
+// 平滑滚动容器
+.scroll-container {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  // 隐藏滚动条（移动端）
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+// ==================== 键盘适配 ====================
+
+// 键盘弹出时的容器样式
+.keyboard-open {
+  // iOS Safari 键盘弹出时的处理
+  @supports (padding-bottom: env(safe-area-inset-bottom)) {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+// 输入框容器（键盘弹出时固定在底部）
+.input-fixed-bottom {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: var(--bg-primary);
+  border-top: 1px solid var(--border-color);
+
+  // 安全区域
+  padding-bottom: var(--sab);
+
+  // 键盘弹出时的阴影
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+}
+
+// ==================== 对话框适配 ====================
+
+// 移动端全屏对话框
+@media (max-width: 768px) {
+  .el-dialog {
+    --el-dialog-margin-top: 0;
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+  }
+
+  .el-dialog__wrapper {
+    padding: 0 !important;
+  }
+
+  .el-dialog__body {
+    height: calc(100% - 100px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+// 移动端底部弹出的对话框（ActionSheet 风格）
+@media (max-width: 768px) {
+  .action-sheet {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #fff;
+    border-radius: 12px 12px 0 0;
+    z-index: 2000;
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
+
+    &.show {
+      transform: translateY(0);
+    }
+
+    // 安全区域
+    padding-bottom: var(--sab);
+  }
+
+  .action-sheet-mask {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1999;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+
+    &.show {
+      opacity: 1;
+    }
+  }
+}
+
+// ==================== 表单优化 ====================
+
+// 移动端表单输入优化
+@media (max-width: 768px) {
+  // 增大输入框点击区域
+  .el-input__wrapper {
+    min-height: 44px !important;
+  }
+
+  .el-textarea__inner {
+    min-height: 44px !important;
+    font-size: 16px !important; // 防止 iOS 缩放
+  }
+
+  // 增大复选框/单选框点击区域
+  .el-checkbox,
+  .el-radio {
+    min-height: 44px;
+    line-height: 44px;
+  }
+
+  // 增大按钮点击区域
+  .el-button {
+    min-height: 44px;
+  }
+}
+
+// ==================== 列表优化 ====================
+
+// 移动端列表项优化
+@media (max-width: 768px) {
+  .list-item {
+    min-height: 56px;
+    padding: 12px 16px;
+
+    // 去除默认边框
+    border-bottom: 1px solid var(--border-color);
+
+    // 触摸反馈
+    &:active {
+      background-color: rgba(0, 0, 0, 0.05);
+    }
+  }
+}
+
+// ==================== 图片优化 ====================
+
+// 防止移动端图片拖拽
+img {
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+  user-drag: none;
+}
+
+// 图片懒加载占位
+.lazy-image {
+  background: #f5f5f5;
+  transition: opacity 0.3s ease;
+
+  &.loading {
+    opacity: 0;
+  }
+
+  &.loaded {
+    opacity: 1;
+  }
+}
+
+// ==================== 通知/提示优化 ====================
+
+// 移动端通知样式
+@media (max-width: 768px) {
+  .el-notification {
+    max-width: calc(100vw - 32px) !important;
+    margin: 0 16px !important;
+  }
+
+  .el-message {
+    min-width: auto !important;
+    max-width: calc(100vw - 32px) !important;
+  }
+}
+
+// ==================== 底部导航栏 ====================
+
+// 底部导航栏通用样式
+.bottom-navigation {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--bottom-nav-total-height);
+  background: var(--bg-primary);
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  z-index: 100;
+
+  // 确保在安全区域之上
+  padding-bottom: var(--sab);
+
+  .nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: color 0.15s;
+    -webkit-tap-highlight-color: transparent;
+
+    &:active {
+      opacity: 0.7;
+    }
+
+    &.active {
+      color: #2b7fff;
+    }
+
+    .nav-icon {
+      font-size: 22px;
+    }
+
+    .nav-label {
+      font-size: 10px;
+      margin-top: 2px;
+    }
+  }
+}
+
+// ==================== 页面容器 ====================
+
+// 移动端页面容器（考虑底部导航栏）
+@media (max-width: 768px) {
+  .page-container {
+    height: calc(100vh - var(--bottom-nav-total-height));
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+// ==================== 聊天界面优化 ====================
+
+// 聊天消息列表优化
+@media (max-width: 768px) {
+  .message-list {
+    // 防止 iOS 弹性滚动
+    overscroll-behavior-y: contain;
+
+    // 平滑滚动
+    scroll-behavior: smooth;
+  }
+
+  // 消息气泡触摸优化
+  .message-bubble {
+    -webkit-touch-callout: none;
+    touch-action: manipulation;
+
+    &:active {
+      transform: scale(0.98);
+      transition: transform 0.1s ease;
+    }
+  }
+}
+
+// ==================== 聊天输入框优化 ====================
+
+@media (max-width: 768px) {
+  .chat-input-container {
+    // 固定在底部
+    position: fixed;
+    bottom: var(--bottom-nav-total-height);
+    left: 0;
+    right: 0;
+    z-index: 50;
+
+    // 安全区域
+    padding-bottom: var(--sab);
+
+    // 键盘弹出时的处理
+    .el-textarea__inner {
+      font-size: 16px !important; // 防止 iOS 缩放
+    }
+  }
+}
+
+// ==================== 转场动画 ====================
+
+// 移动端页面转场
+@media (max-width: 768px) {
+  .page-slide-left-enter-active,
+  .page-slide-left-leave-active,
+  .page-slide-right-enter-active,
+  .page-slide-right-leave-active {
+    transition: transform 0.3s ease;
+  }
+
+  .page-slide-left-enter-from {
+    transform: translateX(100%);
+  }
+
+  .page-slide-left-leave-to {
+    transform: translateX(-100%);
+  }
+
+  .page-slide-right-enter-from {
+    transform: translateX(-100%);
+  }
+
+  .page-slide-right-leave-to {
+    transform: translateX(100%);
+  }
+}
+
+// ==================== 深色模式适配 ====================
+
+// 深色模式下的移动端样式
+@media (prefers-color-scheme: dark) {
+  // 状态栏适配（需要在 Capacitor 中配置）
+  .status-bar-dark {
+    color-scheme: dark;
+  }
+}
+
+// ==================== 打印样式 ====================
+
+@media print {
+  .hide-print {
+    display: none !important;
+  }
+}
