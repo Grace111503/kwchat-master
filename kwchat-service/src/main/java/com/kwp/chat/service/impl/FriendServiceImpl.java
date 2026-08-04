@@ -277,6 +277,16 @@ public class FriendServiceImpl implements FriendService {
     }
 
     @Override
+    public boolean isBlocked(Long userId, Long friendId) {
+        return friendMapper.countBlacklist(userId, friendId) > 0;
+    }
+
+    @Override
+    public boolean isBlockedBy(Long userId, Long friendId) {
+        return friendMapper.countBlacklist(friendId, userId) > 0;
+    }
+
+    @Override
     public void updateFriendGroup(Long userId, Long friendId, String groupName) {
         Friend friend = friendMapper.selectByUserIdAndFriendId(userId, friendId);
         if (friend == null) {

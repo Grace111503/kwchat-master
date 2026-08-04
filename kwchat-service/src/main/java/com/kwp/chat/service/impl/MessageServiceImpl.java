@@ -3,9 +3,12 @@ package com.kwp.chat.service.impl;
 import com.kwp.chat.common.constant.CommonConstant;
 import com.kwp.chat.common.exception.BusinessException;
 import com.kwp.chat.common.result.ResultCode;
+import com.kwp.chat.dao.ConversationMapper;
 import com.kwp.chat.dao.ConversationMemberMapper;
+import com.kwp.chat.dao.FriendMapper;
 import com.kwp.chat.dao.MessageMapper;
 import com.kwp.chat.dao.MessageReadMapper;
+import com.kwp.chat.model.message.Conversation;
 import com.kwp.chat.model.message.ConversationMember;
 import com.kwp.chat.model.message.Message;
 import com.kwp.chat.model.message.MessageRead;
@@ -30,6 +33,8 @@ public class MessageServiceImpl implements MessageService {
     private final MessageMapper messageMapper;
     private final MessageReadMapper messageReadMapper;
     private final ConversationMemberMapper conversationMemberMapper;
+    private final ConversationMapper conversationMapper;
+    private final FriendMapper friendMapper;
     private final ConversationService conversationService;
 
     @Override
@@ -42,6 +47,24 @@ public class MessageServiceImpl implements MessageService {
         ConversationMember member = conversationMemberMapper.selectByConversationIdAndUserId(conversationId, senderId);
         if (member == null) {
             throw new BusinessException(ResultCode.NOT_GROUP_MEMBER);
+        }
+
+        // 检查黑名单（仅单聊）
+        Conversation conversation = conversationMapper.selectById(conversationId);
+        if (conversation != null && conversation.getConversationType() == 1) {
+            // 单聊会话，获取对方用户ID
+            ConversationMember otherMember = conversationMemberMapper.selectOtherMember(conversationId, senderId);
+            if (otherMember != null) {
+                // 检查是否存在拉黑关系（任一方拉黑另一方）
+                if (friendMapper.countAnyBlacklist(senderId, otherMember.getUserId()) > 0) {
+                    // 判断是被拉黑还是拉黑了对方
+                    if (friendMapper.countBlacklist(otherMember.getUserId(), senderId) > 0) {
+                        throw new BusinessException(ResultCode.USER_BLOCKED);
+                    } else {
+                        throw new BusinessException(ResultCode.USER_BLOCKED_BY_OTHER);
+                    }
+                }
+            }
         }
 
         // 检查客户端消息ID是否重复

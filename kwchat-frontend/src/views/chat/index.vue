@@ -152,10 +152,21 @@
           <span>{{ typingText }}</span>
         </div>
 
+        <!-- 黑名单提示 -->
+        <div v-if="isChatBlocked" class="blocked-tip">
+          <el-icon><Warning /></el-icon>
+          <span>你已被对方拉黑，无法发送消息</span>
+        </div>
+        <div v-else-if="isChatBlockedByMe" class="blocked-by-me-tip">
+          <el-icon><Warning /></el-icon>
+          <span>你已拉黑对方，对方将无法收到你的消息</span>
+          <el-button type="primary" link @click="handleUnblock">取消拉黑</el-button>
+        </div>
+
         <!-- 输入区域 -->
         <ChatInput
           ref="chatInputRef"
-          :disabled="false"
+          :disabled="isChatBlocked"
           :is-group="isGroupChat"
           :members="groupMembers"
           :reply-message="replyMessage"
@@ -203,7 +214,7 @@
     <el-dialog
       v-model="showForwardDialog"
       title="转发消息"
-      width="400px"
+      width="min(400px, 90vw)"
     >
       <div class="forward-dialog-content">
         <div class="forward-preview">
@@ -275,6 +286,19 @@ const selectedMessages = ref([])
 
 // 是否为群聊
 const isGroupChat = computed(() => chatStore.currentConversation?.conversationType === 2)
+
+// 黑名单状态
+const isChatBlocked = computed(() => {
+  // 单聊会话且被对方拉黑
+  return chatStore.currentConversation?.conversationType === 1 &&
+         chatStore.isBlockedBy
+})
+
+const isChatBlockedByMe = computed(() => {
+  // 单聊会话且我拉黑了对方
+  return chatStore.currentConversation?.conversationType === 1 &&
+         chatStore.isBlocked
+})
 
 // 过滤消息（用于搜索）
 const filteredMessages = computed(() => {
@@ -367,6 +391,22 @@ const loadGroupMembers = async (conversationId) => {
     }
   } catch (error) {
     console.error('加载群成员失败:', error)
+  }
+}
+
+// 取消拉黑
+const handleUnblock = async () => {
+  if (!chatStore.currentConversation?.targetUserId) return
+  try {
+    const { unblackFriend } = await import('@/api/friend')
+    const res = await unblackFriend(chatStore.currentConversation.targetUserId)
+    if (res.code === 200) {
+      ElMessage.success('已取消拉黑')
+      // 刷新黑名单状态
+      await chatStore.checkBlacklist(chatStore.currentConversation.targetUserId)
+    }
+  } catch (error) {
+    ElMessage.error('取消拉黑失败')
   }
 }
 
@@ -953,7 +993,7 @@ onUnmounted(() => {
 
 .chat-header {
   height: 56px;
-  padding: 0 20px;
+  padding: env(safe-area-inset-top, 0px) 20px 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1042,6 +1082,32 @@ onUnmounted(() => {
   }
 }
 
+.blocked-tip,
+.blocked-by-me-tip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #fef0f0;
+  border-bottom: 1px solid #fde2e2;
+  color: #f56c6c;
+  font-size: 14px;
+
+  .el-icon {
+    font-size: 18px;
+  }
+}
+
+.blocked-by-me-tip {
+  background: #fdf6ec;
+  border-bottom-color: #faecd8;
+  color: #e6a23c;
+
+  .el-button {
+    margin-left: auto;
+  }
+}
+
 .multi-select-toolbar {
   display: flex;
   align-items: center;
@@ -1104,8 +1170,10 @@ onUnmounted(() => {
 // 移动端响应式
 @media (max-width: 768px) {
   .chat-container {
-    height: calc(100vh - 56px);
+    // 使用 CSS 变量计算高度
+    height: calc(100vh - var(--bottom-nav-height) - var(--sab));
     position: relative;
+    overflow: hidden;
   }
 
   .conversation-list {
@@ -1117,7 +1185,10 @@ onUnmounted(() => {
     right: 0;
     bottom: 0;
     z-index: 10;
-    transition: transform 0.3s;
+    transition: transform 0.3s ease;
+
+    // 防止 iOS 弹性滚动
+    overscroll-behavior-y: contain;
 
     &.mobile-hidden {
       transform: translateX(-100%);
@@ -1133,7 +1204,7 @@ onUnmounted(() => {
     bottom: 0;
     z-index: 5;
     transform: translateX(100%);
-    transition: transform 0.3s;
+    transition: transform 0.3s ease;
 
     &.mobile-fullscreen {
       transform: translateX(0);
@@ -1142,7 +1213,9 @@ onUnmounted(() => {
 
   .chat-header {
     height: 48px;
-    padding: 0 12px;
+    padding: var(--sat) 12px 0;
+    // 增大触摸区域
+    min-height: 48px;
   }
 
   .back-btn {
@@ -1150,14 +1223,13 @@ onUnmounted(() => {
     cursor: pointer;
     margin-right: 8px;
     color: #333;
+    // 增大点击区域
+    padding: 8px;
+    margin: -8px 8px -8px 0;
   }
 
   .chat-title .name {
     font-size: 14px;
-  }
-
-  .message-content {
-    max-width: 75%;
   }
 
   .multi-select-toolbar {
@@ -1169,8 +1241,17 @@ onUnmounted(() => {
       .el-button {
         padding: 4px 8px;
         font-size: 12px;
+        // 增大点击区域
+        min-height: 32px;
       }
     }
+  }
+
+  // 消息列表优化
+  .message-list {
+    // 防止 iOS 弹性滚动
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
   }
 }
 </style>

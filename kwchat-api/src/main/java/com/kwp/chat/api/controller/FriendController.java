@@ -11,6 +11,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -119,6 +120,19 @@ public class FriendController {
         Long userId = getCurrentUserId(request);
         List<User> blacklist = friendService.getBlacklist(userId);
         return Result.success(blacklist);
+    }
+
+    @Operation(summary = "检查黑名单状态")
+    @GetMapping("/check-blacklist/{userId}")
+    public Result<Map<String, Boolean>> checkBlacklistStatus(HttpServletRequest request,
+                                                             @PathVariable Long userId) {
+        Long currentUserId = getCurrentUserId(request);
+        boolean isBlocked = friendService.isBlocked(currentUserId, userId);
+        boolean isBlockedBy = friendService.isBlockedBy(currentUserId, userId);
+        Map<String, Boolean> result = new HashMap<>();
+        result.put("isBlocked", isBlocked);      // 我拉黑了对方
+        result.put("isBlockedBy", isBlockedBy);  // 对方拉黑了我
+        return Result.success(result);
     }
 
     @Operation(summary = "更新好友分组")

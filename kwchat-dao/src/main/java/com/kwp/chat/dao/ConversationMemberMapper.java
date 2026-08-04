@@ -47,4 +47,10 @@ public interface ConversationMemberMapper extends BaseMapper<ConversationMember>
      */
     @Select("SELECT user_id FROM chat_conversation_member WHERE conversation_id = #{conversationId} AND deleted = 0")
     List<Long> selectUserIdsByConversationId(@Param("conversationId") Long conversationId);
+
+    /**
+     * 获取单聊会话中的对方成员
+     */
+    @Select("SELECT * FROM chat_conversation_member WHERE conversation_id = #{conversationId} AND user_id != #{userId} AND deleted = 0 LIMIT 1")
+    ConversationMember selectOtherMember(@Param("conversationId") Long conversationId, @Param("userId") Long userId);
 }

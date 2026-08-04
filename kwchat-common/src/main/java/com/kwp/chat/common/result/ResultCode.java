@@ -56,6 +56,8 @@ public enum ResultCode {
     MESSAGE_RECALL_FAILED(5004, "消息撤回失败"),
     MESSAGE_SEND_FAILED(5005, "消息发送失败"),
     MESSAGE_TYPE_NOT_SUPPORTED(5006, "不支持的消息类型"),
+    USER_BLOCKED(5007, "你已被对方拉黑，无法发送消息"),
+    USER_BLOCKED_BY_OTHER(5008, "你拉黑了对方，无法发送消息"),
 
     // 文件相关 6xxx
     FILE_NOT_FOUND(6001, "文件不存在"),

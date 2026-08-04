@@ -133,3 +133,15 @@ export function checkIsFriend(friendId) {
     method: 'get'
   })
 }
+
+/**
+ * 检查黑名单状态
+ * @param {number} userId - 要检查的用户ID
+ * @returns {Promise<{isBlocked: boolean, isBlockedBy: boolean}>}
+ */
+export function checkBlacklistStatus(userId) {
+  return request({
+    url: `/friend/check-blacklist/${String(userId)}`,
+    method: 'get'
+  })
+}

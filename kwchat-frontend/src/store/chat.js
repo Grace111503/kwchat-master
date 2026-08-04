@@ -3,9 +3,12 @@ import { ref, computed } from 'vue'
 import { getConversationList, clearUnreadCount, getConversationMembers } from '@/api/conversation'
 import { getMessageList, sendMessage as sendMessageApi, markConversationMessagesAsRead } from '@/api/message'
 import { getUserDetail } from '@/api/user'
+import { checkBlacklistStatus } from '@/api/friend'
 import websocketManager from '@/utils/websocket'
 import { getToken } from '@/utils/auth'
 import { useUserStore } from '@/store/user'
+import { getWsUrl } from '@/utils/platform'
+import { ElMessage } from 'element-plus'
 
 // 用户信息缓存
 const userCache = new Map()
@@ -21,6 +24,10 @@ export const useChatStore = defineStore('chat', () => {
   const currentPage = ref(1)
   const pageSize = 20
   const unreadFriendRequests = ref(0)
+
+  // 黑名单状态
+  const isBlocked = ref(false)       // 我是否拉黑了对方
+  const isBlockedBy = ref(false)     // 对方是否拉黑了我
 
   // 计算属性
   const totalUnread = computed(() => {
@@ -42,7 +49,8 @@ export const useChatStore = defineStore('chat', () => {
     const token = getToken()
     if (!token) return
 
-    const wsUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`
+    // 获取 WebSocket URL
+    const wsUrl = getWsUrl()
     websocketManager.connect(wsUrl)
 
     // 监听新消息
@@ -61,6 +69,25 @@ export const useChatStore = defineStore('chat', () => {
     websocketManager.off('friend_request', handleFriendRequestNotify)
     websocketManager.off('friend_request_handle', handleFriendRequestHandle)
     websocketManager.disconnect()
+  }
+
+  // 检查黑名单状态
+  const checkBlacklist = async (targetUserId) => {
+    try {
+      const res = await checkBlacklistStatus(targetUserId)
+      if (res.code === 200) {
+        isBlocked.value = res.data?.isBlocked || false
+        isBlockedBy.value = res.data?.isBlockedBy || false
+      }
+    } catch (error) {
+      console.error('检查黑名单状态失败:', error)
+    }
+  }
+
+  // 清除黑名单状态（切换会话时调用）
+  const clearBlacklistStatus = () => {
+    isBlocked.value = false
+    isBlockedBy.value = false
   }
 
   // 加载会话列表
@@ -90,6 +117,12 @@ export const useChatStore = defineStore('chat', () => {
     messages.value = []
     currentPage.value = 1
     hasMore.value = true
+    // 清除之前的黑名单状态
+    clearBlacklistStatus()
+    // 如果是单聊，检查黑名单状态
+    if (conversation.conversationType === 1 && conversation.targetUserId) {
+      await checkBlacklist(conversation.targetUserId)
+    }
     await loadMessages(conversation.id, true)
     // 清除未读数
     await clearUnreadCount(conversation.id)
@@ -198,6 +231,21 @@ export const useChatStore = defineStore('chat', () => {
   // 发送消息
   const sendMessage = async (conversationId, messageType, content, extra = {}) => {
     try {
+      // 检查黑名单（单聊会话）
+      const conv = conversations.value.find(c => c.id === conversationId)
+      if (conv && conv.conversationType === 1 && conv.targetUserId) {
+        // 检查黑名单状态
+        await checkBlacklist(conv.targetUserId)
+
+        if (isBlockedBy.value) {
+          ElMessage.error('你已被对方拉黑，无法发送消息')
+          return
+        }
+        if (isBlocked.value) {
+          ElMessage.warning('你已拉黑对方，对方将无法收到你的消息')
+        }
+      }
+
       const res = await sendMessageApi({
         conversationId,
         messageType,
@@ -344,12 +392,16 @@ export const useChatStore = defineStore('chat', () => {
     totalUnread,
     pinnedConversations,
     unpinnedConversations,
+    isBlocked,
+    isBlockedBy,
     initWebSocket,
     disconnectWebSocket,
     loadConversations,
     selectConversation,
     loadMessages,
     sendMessage,
+    checkBlacklist,
+    clearBlacklistStatus,
     handleNewMessage,
     handleReadReceipt,
     handleFriendRequestNotify,

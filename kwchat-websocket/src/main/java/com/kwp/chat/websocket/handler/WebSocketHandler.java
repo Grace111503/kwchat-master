@@ -5,6 +5,7 @@ import com.kwp.chat.common.model.WsMessage;
 import com.kwp.chat.common.model.WsSession;
 import com.kwp.chat.common.utils.JwtUtils;
 import com.kwp.chat.dao.ConversationMemberMapper;
+import com.kwp.chat.dao.FriendMapper;
 import com.kwp.chat.websocket.manager.ChannelManager;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -28,13 +29,15 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<WebSocketFrame
     private final JwtUtils jwtUtils;
     private final ObjectMapper objectMapper;
     private final ConversationMemberMapper conversationMemberMapper;
+    private final FriendMapper friendMapper;
 
     public WebSocketHandler(ChannelManager channelManager, JwtUtils jwtUtils, ObjectMapper objectMapper,
-                           ConversationMemberMapper conversationMemberMapper) {
+                           ConversationMemberMapper conversationMemberMapper, FriendMapper friendMapper) {
         this.channelManager = channelManager;
         this.jwtUtils = jwtUtils;
         this.objectMapper = objectMapper;
         this.conversationMemberMapper = conversationMemberMapper;
+        this.friendMapper = friendMapper;
     }
 
     @Override
@@ -248,6 +251,15 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<WebSocketFrame
         Long conversationId = message.getConversationId();
 
         try {
+            // 检查黑名单（仅单聊）
+            if (receiverId != null) {
+                // 检查是否存在拉黑关系（任一方拉黑另一方）
+                if (friendMapper.countAnyBlacklist(senderId, receiverId) > 0) {
+                    sendError(channel, "无法发送消息，存在拉黑关系");
+                    return;
+                }
+            }
+
             String jsonMessage = objectMapper.writeValueAsString(message);
 
             if (receiverId != null) {

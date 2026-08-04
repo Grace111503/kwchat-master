@@ -31,4 +31,18 @@ public interface FriendMapper extends BaseMapper<Friend> {
      */
     @Select("SELECT COUNT(*) FROM sys_friend WHERE user_id = #{userId} AND friend_id = #{friendId} AND deleted = 0")
     int countByUserIdAndFriendId(@Param("userId") Long userId, @Param("friendId") Long friendId);
+
+    /**
+     * 检查 userId 是否拉黑了 friendId
+     */
+    @Select("SELECT COUNT(*) FROM sys_friend WHERE user_id = #{userId} AND friend_id = #{friendId} AND is_black = 1 AND deleted = 0")
+    int countBlacklist(@Param("userId") Long userId, @Param("friendId") Long friendId);
+
+    /**
+     * 检查单聊会话中是否存在拉黑关系（任一方拉黑另一方）
+     */
+    @Select("SELECT COUNT(*) FROM sys_friend WHERE " +
+            "((user_id = #{userId1} AND friend_id = #{userId2}) OR (user_id = #{userId2} AND friend_id = #{userId1})) " +
+            "AND is_black = 1 AND deleted = 0")
+    int countAnyBlacklist(@Param("userId1") Long userId1, @Param("userId2") Long userId2);
 }

@@ -67,6 +67,16 @@ public interface FriendService {
     List<User> getBlacklist(Long userId);
 
     /**
+     * 检查是否拉黑了对方
+     */
+    boolean isBlocked(Long userId, Long friendId);
+
+    /**
+     * 检查是否被对方拉黑
+     */
+    boolean isBlockedBy(Long userId, Long friendId);
+
+    /**
      * 更新好友分组
      */
     void updateFriendGroup(Long userId, Long friendId, String groupName);
