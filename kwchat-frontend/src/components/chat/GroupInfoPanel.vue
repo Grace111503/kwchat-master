@@ -3,14 +3,14 @@
     v-model="visible"
     title="群聊信息"
     direction="rtl"
-    size="360px"
+    :size="windowWidth <= 768 ? '100%' : '360px'"
     @open="loadGroupInfo"
   >
     <div class="group-info-panel" v-loading="loading">
       <!-- 群基本信息 -->
       <div class="group-header">
         <div class="avatar-upload" v-if="isOwnerOrAdmin" @click="triggerAvatarUpload">
-          <el-avatar :size="64" :src="conversation?.avatar" shape="square">
+          <el-avatar :size="64" :src="getFullFileUrl(conversation?.avatar)" shape="square">
             {{ getAvatarFallback(conversation?.name) }}
           </el-avatar>
           <div class="avatar-overlay">
@@ -18,7 +18,7 @@
             <span>更换头像</span>
           </div>
         </div>
-        <el-avatar v-else :size="64" :src="conversation?.avatar" shape="square">
+        <el-avatar v-else :size="64" :src="getFullFileUrl(conversation?.avatar)" shape="square">
           {{ getAvatarFallback(conversation?.name) }}
         </el-avatar>
         <div class="group-name" v-if="!editingName">{{ conversation?.name }}</div>
@@ -67,7 +67,7 @@
             :key="member.userId"
             class="member-item"
           >
-            <el-avatar :size="36" :src="member.avatar" shape="square">
+            <el-avatar :size="36" :src="getFullFileUrl(member.avatar)" shape="square">
               {{ getAvatarFallback(member.nickname || member.username) }}
             </el-avatar>
             <div class="member-info">
@@ -119,7 +119,7 @@
     </div>
 
     <!-- 添加成员对话框 -->
-    <el-dialog v-model="showAddMember" title="添加成员" width="400px" append-to-body>
+    <el-dialog v-model="showAddMember" title="添加成员" width="min(400px, 90vw)" append-to-body>
       <div class="add-member-list">
         <div
           v-for="friend in availableFriends"
@@ -164,6 +164,7 @@ import { useUserStore } from '@/store/user'
 import { getConversationMembers, addConversationMember, removeConversationMember, updateAnnouncement, updateGroupName, updateGroupAvatar, dissolveGroup, updateMemberRole } from '@/api/conversation'
 import { getFriendList } from '@/api/friend'
 import { uploadImage } from '@/api/file'
+import { getFullFileUrl } from '@/utils/platform'
 import GroupAnnouncement from './GroupAnnouncement.vue'
 
 const props = defineProps({
@@ -174,6 +175,11 @@ const visible = defineModel('visible', { type: Boolean, default: false })
 
 const chatStore = useChatStore()
 const userStore = useUserStore()
+
+const windowWidth = ref(window.innerWidth)
+window.addEventListener('resize', () => {
+  windowWidth.value = window.innerWidth
+})
 
 const loading = ref(false)
 const members = ref([])

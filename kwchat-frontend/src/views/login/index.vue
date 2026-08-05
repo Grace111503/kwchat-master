@@ -2,7 +2,7 @@
   <div class="login-container">
     <div class="login-left">
       <div class="brand">
-        <div class="brand-logo">KW</div>
+        <img src="/pwa-192x192.png" alt="快伟通" class="brand-logo-img" />
         <h1 class="brand-name">快伟通</h1>
         <p class="brand-desc">企业级即时通讯平台</p>
       </div>
@@ -65,6 +65,12 @@
             <span>还没有账号？</span>
             <el-link type="primary" underline="never" @click="goToRegister">立即注册</el-link>
           </div>
+
+          <div class="debug-link">
+            <el-link type="info" underline="never" @click="goToDebug" :underline="false">
+              网络调试工具
+            </el-link>
+          </div>
         </el-form>
       </div>
     </div>
@@ -93,7 +99,7 @@ const loginForm = reactive({
 const loginRules = {
   username: [
     { required: true, message: '请输入用户名', trigger: 'blur' },
-    { min: 3, max: 20, message: '用户名长度在 3 到 20 个字符', trigger: 'blur' }
+    { min: 2, max: 20, message: '用户名长度在 2 到 20 个字符', trigger: 'blur' }
   ],
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' },
@@ -123,6 +129,10 @@ const handleLogin = async () => {
 const goToRegister = () => {
   router.push({ name: 'Register' })
 }
+
+const goToDebug = () => {
+  router.push({ name: 'Debug' })
+}
 </script>
 
 <style lang="scss" scoped>
@@ -145,18 +155,12 @@ const goToRegister = () => {
   color: #1a1a1a;
 }
 
-.brand-logo {
-  width: 64px;
-  height: 64px;
-  background: #2b7fff;
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  font-weight: 700;
-  letter-spacing: 2px;
+.brand-logo-img {
+  width: 80px;
+  height: 80px;
   margin: 0 auto 24px;
+  display: block;
+  object-fit: contain;
 }
 
 .brand-name {
@@ -246,6 +250,75 @@ const goToRegister = () => {
 
   .el-link {
     margin-left: 4px;
+  }
+}
+
+.debug-link {
+  text-align: center;
+  margin-top: 12px;
+  font-size: 12px;
+
+  .el-link {
+    color: #c0c0c0;
+
+    &:hover {
+      color: #999;
+    }
+  }
+}
+
+// 移动端适配
+@media (max-width: 768px), (max-device-width: 768px) {
+  .login-container {
+    flex-direction: column;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .login-left {
+    width: 100%;
+    height: auto;
+    padding: 40px 20px 20px;
+    border-right: none;
+    border-bottom: 1px solid #e5e5e5;
+  }
+
+  .brand-logo-img {
+    width: 60px;
+    height: 60px;
+    margin-bottom: 12px;
+  }
+
+  .brand-name {
+    font-size: 22px;
+  }
+
+  .brand-desc {
+    font-size: 12px;
+  }
+
+  .login-right {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .login-card {
+    width: 100%;
+    max-width: 340px;
+  }
+
+  .el-input__wrapper {
+    min-height: 44px !important;
+  }
+
+  .login-btn {
+    min-height: 44px;
+  }
+
+  .el-textarea__inner {
+    font-size: 16px !important;
   }
 }
 </style>

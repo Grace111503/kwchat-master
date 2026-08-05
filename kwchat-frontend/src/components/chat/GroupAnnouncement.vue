@@ -11,7 +11,7 @@
     <el-dialog
       v-model="showDetail"
       title="群公告"
-      width="500px"
+      width="min(500px, 90vw)"
     >
       <div class="announcement-detail">
         <div class="detail-content">{{ announcement }}</div>
@@ -33,7 +33,7 @@
     <el-dialog
       v-model="showEditor"
       title="编辑群公告"
-      width="500px"
+      width="min(500px, 90vw)"
       :close-on-click-modal="false"
     >
       <div class="editor-content">

@@ -4,7 +4,7 @@
     <div class="sidebar hide-mobile">
       <div class="sidebar-header">
         <div class="user-avatar">
-          <el-avatar :size="36" :src="userInfo?.avatar" shape="square">
+          <el-avatar :size="36" :src="getFullFileUrl(userInfo?.avatar)" shape="square">
             {{ getAvatarFallback(userInfo?.nickname || userInfo?.username) }}
           </el-avatar>
         </div>
@@ -91,6 +91,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/store/user'
 import { useChatStore } from '@/store/chat'
 import { useDarkMode } from '@/composables/useDarkMode'
+import { getFullFileUrl } from '@/utils/platform'
 import { ElMessageBox } from 'element-plus'
 import { Sunny, Moon } from '@element-plus/icons-vue'
 
@@ -263,7 +264,8 @@ const handleLogout = () => {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 56px;
+  height: calc(56px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   background: var(--bg-primary);
   border-top: 1px solid var(--border-color);
   display: flex;
@@ -327,11 +329,34 @@ const handleLogout = () => {
 // 移动端适配
 @media (max-width: 768px) {
   .main-layout {
-    padding-bottom: 56px;
+    // 使用 CSS 变量，兼容性更好
+    padding-bottom: calc(var(--bottom-nav-height) + var(--sab));
   }
 
   .main-content {
-    height: calc(100vh - 56px);
+    height: calc(100vh - var(--bottom-nav-height) - var(--sab));
+  }
+
+  .bottom-nav {
+    height: calc(50px + var(--sab));
+    padding-bottom: var(--sab);
+  }
+
+  .bottom-nav-item {
+    padding: 4px 0;
+    // 增大点击区域
+    min-height: 44px;
+  }
+
+  .nav-icon-wrapper {
+    :deep(.el-icon) {
+      font-size: 20px;
+    }
+  }
+
+  .nav-label {
+    font-size: 9px;
+    margin-top: 1px;
   }
 }
 </style>

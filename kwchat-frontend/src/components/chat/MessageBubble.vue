@@ -7,7 +7,7 @@
 
     <el-avatar
       :size="34"
-      :src="message.senderAvatar"
+      :src="getFullFileUrl(message.senderAvatar)"
       shape="circle"
       class="message-avatar"
       :class="{ 'clickable': !isSelf }"
@@ -134,6 +134,7 @@ import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import 'dayjs/locale/zh-cn'
 import MessageActions from './MessageActions.vue'
+import { getFullFileUrl } from '@/utils/platform'
 
 dayjs.extend(relativeTime)
 dayjs.locale('zh-cn')
@@ -203,25 +204,7 @@ const formatText = (text) => {
  * 新格式：/uploads/image/xxx.jpg
  */
 const getFileUrl = (url) => {
-  if (!url) return ''
-
-  // 如果已经是相对路径（以/开头），直接返回
-  if (url.startsWith('/')) {
-    return url
-  }
-
-  // 如果是旧的MinIO格式，转换为本地路径
-  // 匹配：http://IP:9000/kuaitong/xxx 或 http://IP:9000/bucket/xxx
-  const minioPattern = /https?:\/\/[^/]+:\d+\/[^/]+\/([^?]+)/
-  const match = url.match(minioPattern)
-  if (match) {
-    const path = match[1]  // 不包含查询参数
-    console.log('转换MinIO URL:', url, '->', '/uploads/' + path)
-    return '/uploads/' + path
-  }
-
-  // 其他情况直接返回
-  return url
+  return getFullFileUrl(url)
 }
 
 const formatTime = (time) => {
@@ -247,6 +230,8 @@ const formatFileSize = (size) => {
 }
 
 let audio = null
+let blobUrl = null
+
 const playVoice = async () => {
   if (!props.message.fileUrl) {
     ElMessage.error('语音文件不存在')
@@ -265,64 +250,125 @@ const playVoice = async () => {
   console.log('尝试播放语音:', voiceUrl)
 
   try {
-    // 获取音频文件并创建 blob URL
-    const response = await fetch(voiceUrl)
-    console.log('响应状态:', response.status, response.headers.get('content-type'))
-
-    if (!response.ok) throw new Error('文件获取失败: ' + response.status)
-
-    const blob = await response.blob()
-    console.log('文件大小:', blob.size, '类型:', blob.type)
-
-    // 检查文件大小（太小可能是空文件或损坏）
-    if (blob.size < 100) {
-      ElMessage.error('语音文件无效（文件过小）')
-      return
+    // 释放旧的 blob URL
+    if (blobUrl) {
+      URL.revokeObjectURL(blobUrl)
+      blobUrl = null
     }
 
-    // 创建 blob URL
-    const blobUrl = URL.createObjectURL(blob)
-    console.log('Blob URL:', blobUrl)
+    // 检测文件扩展名，判断格式
+    const ext = voiceUrl.split('.').pop().split('?')[0].toLowerCase()
+    console.log('文件扩展名:', ext)
 
-    // 根据音频类型创建不同的播放器
-    const audioType = blob.type || 'audio/webm'
-    console.log('音频类型:', audioType)
-
-    // 检查浏览器是否支持该音频格式
-    const audioElement = document.createElement('audio')
-    const canPlayType = audioElement.canPlayType(audioType)
-    console.log('浏览器支持该格式:', canPlayType)
-
-    if (canPlayType === '') {
-      console.warn('浏览器不支持该音频格式，尝试使用默认格式播放')
+    // 格式映射
+    const mimeTypes = {
+      'webm': 'audio/webm',
+      'm4a': 'audio/mp4',
+      'mp4': 'audio/mp4',
+      'mp3': 'audio/mpeg',
+      'ogg': 'audio/ogg',
+      'wav': 'audio/wav',
+      'aac': 'audio/aac'
     }
+
+    // iOS Safari 兼容：优先使用直接 URL 播放，避免 fetch + blob 的限制
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent)
+    console.log('是否 iOS:', isIOS)
 
     audio = new Audio()
-    audio.src = blobUrl
-    audio.type = audioType
+    audio.preload = 'auto'
+    audio.playsInline = true
+    audio.webkitAllowAirplay = true
+
+    // 根据扩展名设置 type
+    const detectedType = mimeTypes[ext] || 'audio/mpeg'
+    audio.type = detectedType
+    console.log('设置音频类型:', detectedType)
+
+    // iOS Safari：直接使用 URL 播放（不用 fetch + blob）
+    // 非 iOS：也直接使用 URL，更可靠
+    audio.src = voiceUrl
 
     audio.onended = () => {
       isPlaying.value = false
-      URL.revokeObjectURL(blobUrl)
+    }
+
+    audio.onloadedmetadata = () => {
+      console.log('音频加载成功, 时长:', audio.duration)
     }
 
     audio.onerror = (e) => {
       isPlaying.value = false
-      URL.revokeObjectURL(blobUrl)
       const errorCode = e.target.error?.code
       const errorMsg = e.target.error?.message || '未知错误'
       console.error('音频播放错误:', errorCode, errorMsg)
-      ElMessage.error('语音播放失败: ' + errorMsg)
+
+      // 如果直接播放失败，尝试 fetch + blob 方式
+      if (errorCode === 4 || errorMsg.includes('Unsupported')) {
+        console.log('直接播放失败，尝试 fetch + blob 方式...')
+        playVoiceViaFetch(voiceUrl, detectedType)
+      } else {
+        ElMessage.error('语音播放失败: ' + errorMsg)
+      }
     }
 
-    // 预加载音频
-    audio.load()
-
+    console.log('开始播放...')
     await audio.play()
     isPlaying.value = true
   } catch (e) {
     isPlaying.value = false
     console.error('语音播放失败:', e)
+
+    // 尝试 fetch + blob 方式
+    if (e.message && (e.message.includes('user agent') || e.message.includes('permission') || e.message.includes('NotAllowed'))) {
+      console.log('直接播放被阻止，尝试 fetch + blob 方式...')
+      const voiceUrl = getFileUrl(props.message.fileUrl)
+      const ext = voiceUrl.split('.').pop().split('?')[0].toLowerCase()
+      const mimeTypes = { 'webm': 'audio/webm', 'm4a': 'audio/mp4', 'mp4': 'audio/mp4', 'mp3': 'audio/mpeg' }
+      playVoiceViaFetch(voiceUrl, mimeTypes[ext] || 'audio/mpeg')
+    } else {
+      ElMessage.error('语音播放失败: ' + e.message)
+    }
+  }
+}
+
+// 备用方案：通过 fetch 获取音频后用 blob URL 播放
+const playVoiceViaFetch = async (voiceUrl, audioType) => {
+  try {
+    if (blobUrl) {
+      URL.revokeObjectURL(blobUrl)
+      blobUrl = null
+    }
+
+    const response = await fetch(voiceUrl, { mode: 'cors' })
+    if (!response.ok) throw new Error('文件获取失败: ' + response.status)
+
+    const blob = await response.blob()
+    console.log('Blob 获取成功, 大小:', blob.size, '类型:', blob.type)
+
+    if (blob.size < 100) {
+      ElMessage.error('语音文件无效（文件过小）')
+      return
+    }
+
+    blobUrl = URL.createObjectURL(blob)
+    audio = new Audio()
+    audio.preload = 'auto'
+    audio.playsInline = true
+    audio.src = blobUrl
+    audio.type = audioType
+
+    audio.onended = () => { isPlaying.value = false }
+    audio.onerror = (e) => {
+      isPlaying.value = false
+      ElMessage.error('语音播放失败: ' + (e.target.error?.message || '格式不支持'))
+    }
+
+    await audio.play()
+    isPlaying.value = true
+  } catch (e) {
+    isPlaying.value = false
+    console.error('fetch 方式播放失败:', e)
     ElMessage.error('语音播放失败: ' + e.message)
   }
 }
@@ -709,5 +755,22 @@ const getReplyPreviewText = () => {
 .message-status {
   display: flex;
   align-items: center;
+}
+
+// 移动端适配
+@media (max-width: 768px) {
+  .message-content {
+    max-width: 75%;
+  }
+
+  .message-image {
+    max-width: 200px;
+    max-height: 150px;
+  }
+
+  .message-video {
+    max-width: 240px;
+    max-height: 180px;
+  }
 }
 </style>

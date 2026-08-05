@@ -179,3 +179,80 @@ export function getSafeAreaInsets() {
 export function useNativeNavigation() {
   return isCapacitor() && isIOS()
 }
+
+/**
+ * 获取应用版本号
+ */
+export function getAppVersion() {
+  return typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '1.0.0'
+}
+
+/**
+ * 获取完整的文件URL
+ * 在 Capacitor 环境下，将相对路径拼接上服务器地址
+ * @param {string} url - 文件路径（可能是相对路径或完整URL）
+ * @returns {string} 完整的文件URL
+ */
+export function getFullFileUrl(url) {
+  if (!url) return ''
+
+  // 如果已经是完整URL，直接返回
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url
+  }
+
+  // 获取服务器地址
+  const getServerUrl = () => {
+    if (isCapacitor()) {
+      const apiUrl = import.meta.env.VITE_API_SERVER_URL || 'http://118.25.44.250:8080/api'
+      // 确保以 /api 结尾
+      return apiUrl.endsWith('/api') ? apiUrl : apiUrl + '/api'
+    }
+    return ''
+  }
+
+  // 如果是相对路径（以/开头）
+  if (url.startsWith('/')) {
+    if (isCapacitor()) {
+      // 头像文件使用 /api/file/avatar/ 端点
+      if (url.startsWith('/uploads/avatar/')) {
+        const fileName = url.split('/').pop()
+        return getServerUrl() + '/file/avatar/' + fileName
+      }
+      // 图片文件使用 /api/file/image/ 端点
+      if (url.startsWith('/uploads/image/')) {
+        const fileName = url.split('/').pop()
+        return getServerUrl() + '/file/image/' + fileName
+      }
+      // 视频文件使用 /api/file/video/ 端点
+      if (url.startsWith('/uploads/video/')) {
+        const fileName = url.split('/').pop()
+        return getServerUrl() + '/file/video/' + fileName
+      }
+      // 语音文件使用 /api/file/voice/ 端点
+      if (url.startsWith('/uploads/voice/')) {
+        const fileName = url.split('/').pop()
+        return getServerUrl() + '/file/voice/' + fileName
+      }
+      // 其他文件使用 /api/file/document/ 端点
+      if (url.startsWith('/uploads/file/')) {
+        const fileName = url.split('/').pop()
+        return getServerUrl() + '/file/document/' + fileName
+      }
+      // 其他文件使用静态资源路径
+      return getServerUrl() + url
+    }
+    return url
+  }
+
+  // 如果是旧的MinIO格式，转换为本地路径
+  const minioPattern = /https?:\/\/[^/]+:\d+\/[^/]+\/([^?]+)/
+  const match = url.match(minioPattern)
+  if (match) {
+    const path = match[1]
+    return getFullFileUrl('/uploads/' + path)
+  }
+
+  // 其他情况直接返回
+  return url
+}

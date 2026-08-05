@@ -2,7 +2,7 @@
   <div class="profile-container">
     <div class="profile-header">
       <div class="profile-avatar">
-        <el-avatar :size="80" :src="userInfo?.avatar" shape="square">
+        <el-avatar :size="80" :src="getFullFileUrl(userInfo?.avatar)" shape="square">
           {{ getAvatarFallback(userInfo?.nickname || userInfo?.username) }}
         </el-avatar>
         <div class="avatar-overlay" @click="uploadAvatar">
@@ -20,6 +20,14 @@
       <h2 class="profile-name">{{ userInfo?.username || '用户' }}</h2>
       <p class="profile-department">{{ userInfo?.department || '暂未设置部门' }}</p>
       <p class="profile-signature">{{ userInfo?.signature || '暂无签名' }}</p>
+    </div>
+
+    <!-- 移动端退出登录按钮 -->
+    <div class="mobile-logout hide-desktop">
+      <el-button type="danger" plain @click="handleLogout" class="logout-btn">
+        <el-icon><SwitchButton /></el-icon>
+        退出登录
+      </el-button>
     </div>
 
     <div class="profile-content">
@@ -119,10 +127,13 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useUserStore } from '@/store/user'
 import { uploadAvatar as uploadAvatarApi, updateUserInfo as updateUserInfoApi, changePassword as changePasswordApi } from '@/api/user'
-import { ElMessage } from 'element-plus'
+import { getFullFileUrl } from '@/utils/platform'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
+const router = useRouter()
 const userStore = useUserStore()
 const userInfo = ref(userStore.userInfo)
 const activeTab = ref('info')
@@ -213,6 +224,22 @@ const changePassword = async () => {
 
 const resetPassword = () => { passwordForm.oldPassword = ''; passwordForm.newPassword = ''; passwordForm.confirmPassword = '' }
 
+// 退出登录
+const handleLogout = () => {
+  ElMessageBox.confirm(
+    '确定要退出登录吗？',
+    '系统提示',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }
+  ).then(async () => {
+    await userStore.logoutAction()
+    router.push({ name: 'Login' })
+  }).catch(() => {})
+}
+
 // 获取头像 fallback 文字（显示最后两个字）
 const getAvatarFallback = (name) => {
   if (!name) return '用户'
@@ -246,8 +273,9 @@ const handleFileChange = async (event) => {
     const res = await uploadAvatarApi(file)
     if (res.code === 200) {
       // 更新头像
-      userInfo.value.avatar = res.data
-      userStore.updateUserInfo({ avatar: res.data })
+      const newAvatarUrl = res.data.url || res.data
+      userInfo.value.avatar = newAvatarUrl
+      userStore.updateUserInfo({ avatar: newAvatarUrl })
       ElMessage.success('头像上传成功')
     } else {
       ElMessage.error(res.message || '上传失败')
@@ -411,24 +439,71 @@ const handleFileChange = async (event) => {
 }
 
 // 移动端响应式
-@media (max-width: 768px) {
+@media (max-width: 768px), (max-device-width: 768px) {
   .profile-container {
-    height: calc(100vh - 56px);
+    height: calc(100vh - 56px - env(safe-area-inset-bottom, 0px));
+    padding-top: env(safe-area-inset-top, 0px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .profile-header {
     padding: 20px;
   }
 
+  .avatar-overlay {
+    opacity: 1 !important;
+  }
+
   .profile-content {
     margin: 8px;
     padding: 12px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .profile-form,
   .password-form {
     max-width: 100%;
     padding: 0 8px;
+
+    .el-form-item {
+      margin-bottom: 20px;
+    }
+
+    .el-input__wrapper {
+      min-height: 44px !important;
+    }
+
+    .el-button {
+      min-height: 44px;
+    }
+
+    .el-textarea__inner {
+      font-size: 16px !important;
+    }
+  }
+
+  .el-tabs__item {
+    min-height: 44px;
+    line-height: 44px;
+  }
+
+  .option-item {
+    min-height: 56px;
+    padding: 12px;
+  }
+
+  .mobile-logout {
+    padding: 16px;
+    text-align: center;
+
+    .logout-btn {
+      width: 100%;
+      max-width: 300px;
+      height: 44px;
+      font-size: 15px;
+    }
   }
 }
 </style>

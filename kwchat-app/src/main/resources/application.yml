@@ -10,7 +10,7 @@ spring:
     active: dev
   web:
     resources:
-      static-locations: classpath:/static/,file:///D:/KuaiTong/kwchat/uploads/
+      static-locations: classpath:/static/,file:///opt/kwchat/uploads/
 
   # 数据源配置
   datasource:
@@ -153,8 +153,8 @@ file:
   storage:
     type: local
     local:
-      # Windows本地路径
-      path: D:/KuaiTong/kwchat/uploads
+      # 服务器路径（Linux）
+      path: /opt/kwchat/uploads
       url-prefix: /uploads
 
 #Spring AI 配置(使用OpenAI兼容接口)
@@ -210,4 +210,12 @@ management:
   endpoint:
     health:
       show-details: always
+
+# 应用版本配置（热更新）
+app:
+  version: 1.0.1
+  update:
+    url: http://118.25.44.250:8080/uploads/updates/app-v1.0.1.zip
+    notes: 修复拉黑功能，添加热更新支持
+    forceUpdate: false
 

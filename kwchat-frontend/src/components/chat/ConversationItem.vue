@@ -85,6 +85,7 @@ import 'dayjs/locale/zh-cn'
 import { setTop, setDoNotDisturb, getConversationMembers, exitConversation } from '@/api/conversation'
 import { getUserDetail } from '@/api/user'
 import { generateGroupAvatar } from '@/utils/groupAvatar'
+import { getFullFileUrl } from '@/utils/platform'
 import { ElMessage } from 'element-plus'
 
 dayjs.extend(relativeTime)
@@ -314,7 +315,7 @@ const generateAvatar = async () => {
 const avatarUrl = computed(() => {
   const url = props.conversation.avatar || generatedAvatar.value
   console.log('avatarUrl:', url ? url.substring(0, 50) + '...' : 'null')
-  return url
+  return getFullFileUrl(url)
 })
 
 // 监听会话变化，重新生成头像

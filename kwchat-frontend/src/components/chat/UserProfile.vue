@@ -3,14 +3,14 @@
     v-model="visible"
     title="用户信息"
     direction="rtl"
-    size="320px"
+    :size="windowWidth <= 768 ? '100%' : '320px'"
     @open="loadUserInfo"
   >
     <div class="user-profile" v-loading="loading">
       <template v-if="userInfo">
         <!-- 用户头像和基本信息 -->
         <div class="profile-header">
-          <el-avatar :size="72" :src="userInfo.avatar" shape="square">
+          <el-avatar :size="72" :src="getFullFileUrl(userInfo.avatar)" shape="square">
             {{ getAvatarFallback(userInfo.nickname) }}
           </el-avatar>
           <h2 class="profile-name">{{ userInfo.nickname || userInfo.username || '-' }}</h2>
@@ -69,6 +69,7 @@ import { useUserStore } from '@/store/user'
 import { useChatStore } from '@/store/chat'
 import { getOrCreatePrivateConversation } from '@/api/conversation'
 import { getUserDetail } from '@/api/user'
+import { getFullFileUrl } from '@/utils/platform'
 import { ElMessage } from 'element-plus'
 import dayjs from 'dayjs'
 
@@ -87,6 +88,11 @@ const userInfo = ref(null)
 
 const isSelf = computed(() => {
   return userInfo.value?.id === userStore.userInfo?.id
+})
+
+const windowWidth = ref(window.innerWidth)
+window.addEventListener('resize', () => {
+  windowWidth.value = window.innerWidth
 })
 
 const getAvatarFallback = (name) => {

@@ -4,7 +4,7 @@
     <el-dialog
       v-model="showSummary"
       title="智能摘要"
-      width="500px"
+      width="min(500px, 90vw)"
       :close-on-click-modal="false"
     >
       <div class="summary-options">
@@ -44,7 +44,7 @@
     <el-dialog
       v-model="showTranslate"
       title="消息翻译"
-      width="500px"
+      width="min(500px, 90vw)"
       :close-on-click-modal="false"
     >
       <div class="translate-form">

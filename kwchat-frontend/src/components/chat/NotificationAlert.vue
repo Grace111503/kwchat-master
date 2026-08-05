@@ -9,7 +9,7 @@
     <el-dialog
       v-model="showPermissionDialog"
       title="开启通知"
-      width="400px"
+      width="min(400px, 90vw)"
       :close-on-click-modal="false"
     >
       <div class="permission-content">

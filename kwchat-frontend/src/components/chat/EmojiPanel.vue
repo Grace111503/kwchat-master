@@ -378,4 +378,13 @@ loadRecentEmojis()
     gap: 4px;
   }
 }
+
+// 移动端适配
+@media (max-width: 768px) {
+  .emoji-panel {
+    width: calc(100vw - 32px);
+    max-width: 360px;
+    left: -8px;
+  }
+}
 </style>

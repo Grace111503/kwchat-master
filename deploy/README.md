@@ -86,7 +86,7 @@ sudo firewall-cmd --reload
 
 ```bash
 cd /opt
-git clone <你的仓库地址> kwchat
+git clone https://github.com/Grace111503/kwchat-master.git kwchat
 ```
 
 ### 方式二：本地打包上传

@@ -125,6 +125,157 @@ public class FileController {
         }
     }
 
+    @Operation(summary = "获取图片文件")
+    @GetMapping("/image/{fileName}")
+    public void getImage(@PathVariable String fileName, HttpServletResponse response) {
+        try {
+            // 使用配置的上传路径
+            Path filePath = Paths.get(uploadPath, "image", fileName);
+            File file = filePath.toFile();
+            if (!file.exists()) {
+                response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                return;
+            }
+
+            // 根据文件扩展名设置响应头
+            String contentType = getContentType(fileName);
+            response.setContentType(contentType);
+            response.setContentLength((int) file.length());
+
+            // 写入响应
+            try (FileInputStream fis = new FileInputStream(file);
+                 OutputStream os = response.getOutputStream()) {
+                byte[] buffer = new byte[4096];
+                int bytesRead;
+                while ((bytesRead = fis.read(buffer)) != -1) {
+                    os.write(buffer, 0, bytesRead);
+                }
+            }
+        } catch (Exception e) {
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @Operation(summary = "获取视频文件")
+    @GetMapping("/video/{fileName}")
+    public void getVideo(@PathVariable String fileName, HttpServletResponse response) {
+        try {
+            // 使用配置的上传路径
+            Path filePath = Paths.get(uploadPath, "video", fileName);
+            File file = filePath.toFile();
+            if (!file.exists()) {
+                response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                return;
+            }
+
+            // 根据文件扩展名设置响应头
+            String contentType = getContentType(fileName);
+            response.setContentType(contentType);
+            response.setContentLength((int) file.length());
+
+            // 写入响应
+            try (FileInputStream fis = new FileInputStream(file);
+                 OutputStream os = response.getOutputStream()) {
+                byte[] buffer = new byte[4096];
+                int bytesRead;
+                while ((bytesRead = fis.read(buffer)) != -1) {
+                    os.write(buffer, 0, bytesRead);
+                }
+            }
+        } catch (Exception e) {
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @Operation(summary = "获取语音文件")
+    @GetMapping("/voice/{fileName}")
+    public void getVoice(@PathVariable String fileName, HttpServletResponse response) {
+        try {
+            // 使用配置的上传路径
+            Path filePath = Paths.get(uploadPath, "voice", fileName);
+            File file = filePath.toFile();
+            if (!file.exists()) {
+                response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                return;
+            }
+
+            // 根据文件扩展名设置响应头
+            String contentType = getContentType(fileName);
+            response.setContentType(contentType);
+            response.setContentLength((int) file.length());
+
+            // 写入响应
+            try (FileInputStream fis = new FileInputStream(file);
+                 OutputStream os = response.getOutputStream()) {
+                byte[] buffer = new byte[4096];
+                int bytesRead;
+                while ((bytesRead = fis.read(buffer)) != -1) {
+                    os.write(buffer, 0, bytesRead);
+                }
+            }
+        } catch (Exception e) {
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @Operation(summary = "获取文档文件")
+    @GetMapping("/document/{fileName}")
+    public void getDocument(@PathVariable String fileName, HttpServletResponse response) {
+        try {
+            // 使用配置的上传路径
+            Path filePath = Paths.get(uploadPath, "file", fileName);
+            File file = filePath.toFile();
+            if (!file.exists()) {
+                response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                return;
+            }
+
+            // 根据文件扩展名设置响应头
+            String contentType = getContentType(fileName);
+            response.setContentType(contentType);
+            response.setContentLength((int) file.length());
+
+            // 写入响应
+            try (FileInputStream fis = new FileInputStream(file);
+                 OutputStream os = response.getOutputStream()) {
+                byte[] buffer = new byte[4096];
+                int bytesRead;
+                while ((bytesRead = fis.read(buffer)) != -1) {
+                    os.write(buffer, 0, bytesRead);
+                }
+            }
+        } catch (Exception e) {
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * 根据文件扩展名获取Content-Type
+     */
+    private String getContentType(String fileName) {
+        String extension = "";
+        int lastDotIndex = fileName.lastIndexOf('.');
+        if (lastDotIndex >= 0) {
+            extension = fileName.substring(lastDotIndex + 1).toLowerCase();
+        }
+
+        return switch (extension) {
+            case "jpg", "jpeg" -> "image/jpeg";
+            case "png" -> "image/png";
+            case "gif" -> "image/gif";
+            case "webp" -> "image/webp";
+            case "mp4" -> "video/mp4";
+            case "webm" -> "video/webm";
+            case "mp3" -> "audio/mpeg";
+            case "wav" -> "audio/wav";
+            case "ogg" -> "audio/ogg";
+            case "aac" -> "audio/aac";
+            case "m4a" -> "audio/mp4";
+            case "pdf" -> "application/pdf";
+            default -> "application/octet-stream";
+        };
+    }
+
     @Operation(summary = "检查MinIO连接状态")
     @GetMapping("/minio-status")
     public Result<Map<String, Object>> checkMinioStatus() {

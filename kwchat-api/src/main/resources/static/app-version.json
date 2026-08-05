@@ -1,0 +1,6 @@
+{
+  "version": "1.0.2",
+  "url": "http://118.25.44.250:8080/api/uploads/updates/app-v1.0.2.zip",
+  "notes": "修复文件上传404问题，支持图片、视频、语音正常显示",
+  "forceUpdate": false
+}

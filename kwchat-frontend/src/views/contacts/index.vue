@@ -34,7 +34,7 @@
             :class="{ active: selectedContact?.id === friend.id }"
             @click="selectContact(friend)"
           >
-            <el-avatar :size="38" :src="friend.avatar" shape="square">
+            <el-avatar :size="38" :src="getFullFileUrl(friend.avatar)" shape="square">
               {{ getAvatarFallback(friend.nickname) }}
             </el-avatar>
             <div class="contact-info">
@@ -52,7 +52,7 @@
             :class="{ active: selectedContact?.id === group.id }"
             @click="startGroupChat(group)"
           >
-            <el-avatar :size="38" :src="group.avatar" shape="square">
+            <el-avatar :size="38" :src="getFullFileUrl(group.avatar)" shape="square">
               {{ getAvatarFallback(group.name) }}
             </el-avatar>
             <div class="contact-info">
@@ -90,7 +90,7 @@
             :key="user.id"
             class="contact-item"
           >
-            <el-avatar :size="38" :src="user.avatar" shape="square">
+            <el-avatar :size="38" :src="getFullFileUrl(user.avatar)" shape="square">
               {{ getAvatarFallback(user.nickname) }}
             </el-avatar>
             <div class="contact-info">
@@ -107,10 +107,15 @@
     </div>
 
     <!-- 右侧详情 -->
-    <div class="contact-detail">
+    <div class="contact-detail" :class="{ 'mobile-overlay': selectedContact && isMobile }">
+      <!-- 移动端返回按钮 -->
+      <div class="mobile-back-btn hide-desktop" @click="selectedContact = null">
+        <el-icon><ArrowLeft /></el-icon>
+        <span>返回</span>
+      </div>
       <template v-if="selectedContact">
         <div class="detail-header">
-          <el-avatar :size="72" :src="selectedContact.avatar" shape="square">
+          <el-avatar :size="72" :src="getFullFileUrl(selectedContact.avatar)" shape="square">
             {{ getAvatarFallback(selectedContact.name || selectedContact.nickname) }}
           </el-avatar>
           <h2 class="detail-name">
@@ -190,7 +195,7 @@
     </div>
 
     <!-- 添加好友对话框 -->
-    <el-dialog v-model="addFriendVisible" title="添加好友" width="400px">
+    <el-dialog v-model="addFriendVisible" title="添加好友" width="min(400px, 90vw)">
       <el-form :model="addFriendForm" label-width="80px">
         <el-form-item label="搜索">
           <el-input
@@ -208,7 +213,7 @@
             :key="user.id"
             class="search-result-item"
           >
-            <el-avatar :size="38" :src="user.avatar" shape="square">
+            <el-avatar :size="38" :src="getFullFileUrl(user.avatar)" shape="square">
               {{ getAvatarFallback(user.nickname) }}
             </el-avatar>
             <div class="result-info">
@@ -230,7 +235,7 @@
     </el-dialog>
 
     <!-- 编辑备注对话框 -->
-    <el-dialog v-model="editRemarkVisible" title="修改备注" width="400px">
+    <el-dialog v-model="editRemarkVisible" title="修改备注" width="min(400px, 90vw)">
       <el-form :model="editRemarkForm" label-width="80px">
         <el-form-item label="备注名">
           <el-input
@@ -248,7 +253,7 @@
     </el-dialog>
 
     <!-- 创建群聊对话框 -->
-    <el-dialog v-model="createGroupVisible" title="创建群聊" width="450px">
+    <el-dialog v-model="createGroupVisible" title="创建群聊" width="min(450px, 90vw)">
       <el-form :model="createGroupForm" label-width="80px">
         <el-form-item label="群聊名称">
           <el-input
@@ -278,7 +283,7 @@
                 :class="{ selected: createGroupForm.memberIds.includes(friend.id) }"
                 @click="toggleGroupMember(friend.id)"
               >
-                <el-avatar :size="32" :src="friend.avatar" shape="square">
+                <el-avatar :size="32" :src="getFullFileUrl(friend.avatar)" shape="square">
                   {{ getAvatarFallback(friend.nickname) }}
                 </el-avatar>
                 <span class="friend-select-name">{{ friend.remark || friend.nickname }}</span>
@@ -307,10 +312,13 @@ import { useUserStore } from '@/store/user'
 import { getOrCreatePrivateConversation, getConversationList, createGroupConversation } from '@/api/conversation'
 import { getFriendList, getReceivedFriendRequests, deleteFriend, sendFriendRequest as sendFriendRequestApi, handleFriendRequest, updateFriendRemark, blackFriend, unblackFriend, getBlacklist, updateFriendGroup, getFriendGroups } from '@/api/friend'
 import { searchUser as searchUserApi } from '@/api/user'
+import { getFullFileUrl } from '@/utils/platform'
 
 const router = useRouter()
 const chatStore = useChatStore()
 const userStore = useUserStore()
+
+const isMobile = computed(() => window.innerWidth <= 768)
 
 const friendIdSet = computed(() => new Set(friends.value.map(f => f.id)))
 const filteredSearchResults = computed(() => {
@@ -944,7 +952,7 @@ onMounted(() => {
 @media (max-width: 768px) {
   .contacts-container {
     flex-direction: column;
-    height: calc(100vh - 56px);
+    height: calc(100vh - 56px - env(safe-area-inset-bottom, 0px));
   }
 
   .contacts-sidebar {
@@ -955,6 +963,38 @@ onMounted(() => {
 
   .contact-detail {
     display: none;
+
+    &.mobile-overlay {
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 1000;
+      background: var(--bg-primary, #fff);
+      padding-top: env(safe-area-inset-top, 0px);
+    }
+  }
+
+  .mobile-back-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e5e5e5;
+    cursor: pointer;
+    font-size: 14px;
+    color: #333;
+
+    &:active {
+      opacity: 0.7;
+    }
+
+    .el-icon {
+      font-size: 18px;
+    }
   }
 
   .contacts-header {
@@ -967,6 +1007,18 @@ onMounted(() => {
 
   .detail-info {
     padding: 0 16px;
+  }
+
+  .detail-actions {
+    padding: 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+
+    .el-button {
+      flex: 1;
+      min-width: calc(50% - 4px);
+    }
   }
 }
 </style>

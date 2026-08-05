@@ -1,6 +1,7 @@
 import { ref, reactive } from 'vue'
 import { getToken } from './auth'
 import { ElNotification } from 'element-plus'
+import { getClientType, isCapacitor } from './platform'
 
 /**
  * WebSocket管理类
@@ -11,13 +12,77 @@ class WebSocketManager {
     this.url = ''
     this.isConnected = ref(false)
     this.reconnectAttempts = 0
-    this.maxReconnectAttempts = 5
+    this.maxReconnectAttempts = 10
     this.reconnectInterval = 3000
     this.heartbeatInterval = 30000
     this.heartbeatTimer = null
     this.reconnectTimer = null
     this.listeners = new Map()
     this.messageQueue = []
+    this.isInBackground = false
+
+    // 监听页面可见性变化（Capacitor Android 后台/前台切换）
+    this._setupVisibilityListener()
+  }
+
+  /**
+   * 设置页面可见性监听器
+   */
+  _setupVisibilityListener() {
+    // 监听 document visibilitychange（标准浏览器）
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        this.isInBackground = true
+        console.log('WebSocket: 应用进入后台')
+      } else {
+        this.isInBackground = false
+        console.log('WebSocket: 应用回到前台')
+        this._handleForegroundResume()
+      }
+    })
+
+    // 监听 Capacitor appStateChange（更可靠）
+    this._setupCapacitorListeners()
+  }
+
+  /**
+   * 设置 Capacitor 生命周期监听
+   */
+  async _setupCapacitorListeners() {
+    try {
+      const { App } = await import('@capacitor/app')
+      App.addListener('appStateChange', ({ isActive }) => {
+        if (isActive) {
+          console.log('WebSocket: Capacitor 应用回到前台')
+          this.isInBackground = false
+          this._handleForegroundResume()
+        } else {
+          console.log('WebSocket: Capacitor 应用进入后台')
+          this.isInBackground = true
+        }
+      })
+    } catch (e) {
+      // 非 Capacitor 环境，忽略
+      console.log('WebSocket: 非 Capacitor 环境，使用 visibilitychange 监听')
+    }
+  }
+
+  /**
+   * 应用回到前台时的处理
+   */
+  _handleForegroundResume() {
+    // 重置重连次数
+    this.reconnectAttempts = 0
+
+    // 检查 WebSocket 连接状态
+    if (!this.ws || this.ws.readyState === WebSocket.CLOSED || this.ws.readyState === WebSocket.CLOSING) {
+      console.log('WebSocket: 连接已断开，重新连接...')
+      this.connect()
+    } else if (this.ws.readyState === WebSocket.OPEN) {
+      // 连接仍然打开，发送心跳验证
+      console.log('WebSocket: 连接仍打开，发送心跳验证')
+      this.sendHeartbeat()
+    }
   }
 
   /**
@@ -168,7 +233,7 @@ class WebSocketManager {
       type: 'auth',
       data: {
         token,
-        clientType: 'web'
+        clientType: getClientType()
       }
     })
   }
@@ -241,6 +306,11 @@ class WebSocketManager {
   startHeartbeat() {
     this.stopHeartbeat()
     this.heartbeatTimer = setInterval(() => {
+      // 后台时暂停心跳，节省电量
+      if (this.isInBackground) {
+        console.log('WebSocket: 后台模式，暂停心跳')
+        return
+      }
       this.sendHeartbeat()
     }, this.heartbeatInterval)
   }

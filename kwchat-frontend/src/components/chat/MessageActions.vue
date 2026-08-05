@@ -72,7 +72,7 @@
     <el-dialog
       v-model="showForward"
       title="转发消息"
-      width="400px"
+      width="min(400px, 90vw)"
     >
       <div class="forward-content">
         <div class="forward-preview">
@@ -95,7 +95,7 @@
               :value="conversation.id"
             >
               <div class="conversation-option">
-                <el-avatar :size="24" :src="conversation.avatar">
+                <el-avatar :size="24" :src="getFullFileUrl(conversation.avatar)">
                   {{ getAvatarFallback(conversation.name) }}
                 </el-avatar>
                 <span>{{ conversation.name }}</span>
@@ -120,6 +120,7 @@ import { ref, computed } from 'vue'
 import { useChatStore } from '@/store/chat'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { favoriteMessage, unfavoriteMessage, deleteMessage } from '@/api/message'
+import { getFullFileUrl } from '@/utils/platform'
 
 const props = defineProps({
   message: {
@@ -308,6 +309,13 @@ const handleDelete = async () => {
 
 .message-bubble-wrapper:hover .action-trigger {
   opacity: 1;
+}
+
+// 移动端：始终显示操作按钮
+@media (max-width: 768px) {
+  .action-trigger {
+    opacity: 1;
+  }
 }
 
 .action-menu {

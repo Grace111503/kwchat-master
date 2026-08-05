@@ -252,10 +252,11 @@ import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useUserStore } from '@/store/user'
 import { useChatStore } from '@/store/chat'
 import { ElMessage } from 'element-plus'
-import { uploadImage, uploadFile, uploadVideo } from '@/api/file'
+import { uploadImage, uploadFile, uploadVideo, uploadVoice } from '@/api/file'
 import { getConversationMembers } from '@/api/conversation'
 import { recallMessage, deleteMessage, favoriteMessage } from '@/api/message'
 import websocketManager from '@/utils/websocket'
+import { getFullFileUrl } from '@/utils/platform'
 import ConversationItem from '@/components/chat/ConversationItem.vue'
 import MessageBubble from '@/components/chat/MessageBubble.vue'
 import ChatInput from '@/components/chat/ChatInput.vue'
@@ -482,7 +483,7 @@ const handleSendVideo = async (file) => {
 const handleSendVoice = async (file) => {
   if (!chatStore.currentConversation) return
   try {
-    const res = await uploadFile(file)
+    const res = await uploadVoice(file)
     if (res.code === 200) {
       // 使用录音时长，如果有的话
       const duration = file.recordingDuration || await getAudioDuration(file)
@@ -559,14 +560,7 @@ const handlePlayVoice = (message) => {
  * 获取文件URL，兼容旧的MinIO格式
  */
 const getFileUrl = (url) => {
-  if (!url) return ''
-  if (url.startsWith('/')) return url
-  const minioPattern = /https?:\/\/[^/]+:\d+\/[^/]+\/(.+)/
-  const match = url.match(minioPattern)
-  if (match) {
-    return '/uploads/' + match[1]
-  }
-  return url
+  return getFullFileUrl(url)
 }
 
 const handleDownload = (message) => { if (message.fileUrl) window.open(getFileUrl(message.fileUrl), '_blank') }

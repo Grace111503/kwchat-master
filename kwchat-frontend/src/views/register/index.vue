@@ -2,7 +2,7 @@
   <div class="register-container">
     <div class="register-left">
       <div class="brand">
-        <div class="brand-logo">KW</div>
+        <img src="/pwa-192x192.png" alt="快伟通" class="brand-logo-img" />
         <h1 class="brand-name">快伟通</h1>
         <p class="brand-desc">企业级即时通讯平台</p>
       </div>
@@ -139,18 +139,12 @@ const goToLogin = () => router.push({ name: 'Login' })
   color: #1a1a1a;
 }
 
-.brand-logo {
-  width: 64px;
-  height: 64px;
-  background: #2b7fff;
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  font-weight: 700;
-  letter-spacing: 2px;
+.brand-logo-img {
+  width: 80px;
+  height: 80px;
   margin: 0 auto 24px;
+  display: block;
+  object-fit: contain;
 }
 
 .brand-name {
@@ -233,6 +227,45 @@ const goToLogin = () => router.push({ name: 'Login' })
 
   .el-link {
     margin-left: 4px;
+  }
+}
+
+// 移动端适配
+@media (max-width: 768px) {
+  .register-container {
+    flex-direction: column;
+  }
+
+  .register-left {
+    width: 100%;
+    height: auto;
+    padding: 40px 20px 20px;
+    border-right: none;
+    border-bottom: 1px solid #e5e5e5;
+  }
+
+  .brand-logo-img {
+    width: 60px;
+    height: 60px;
+    margin-bottom: 12px;
+  }
+
+  .brand-name {
+    font-size: 22px;
+  }
+
+  .brand-desc {
+    font-size: 12px;
+  }
+
+  .register-right {
+    flex: 1;
+    padding: 20px;
+  }
+
+  .register-card {
+    width: 100%;
+    max-width: 340px;
   }
 }
 </style>

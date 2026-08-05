@@ -2,11 +2,28 @@ import axios from 'axios'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getToken, removeToken } from '@/utils/auth'
 import router from '@/router'
+import { getApiBaseUrl, isCapacitor, isAndroid } from '@/utils/platform'
+
+// 获取 API 基础地址
+const baseURL = getApiBaseUrl()
+
+// 打印环境信息
+console.log('=============================')
+console.log('[API] 环境信息:')
+console.log('[API] isCapacitor:', isCapacitor())
+console.log('[API] isAndroid:', isAndroid())
+console.log('[API] baseURL:', baseURL)
+console.log('[API] full login URL:', baseURL + '/user/login')
+console.log('[API] window.Capacitor:', typeof window !== 'undefined' ? !!window.Capacitor : 'N/A')
+console.log('[API] location.protocol:', typeof window !== 'undefined' ? window.location.protocol : 'N/A')
+console.log('[API] location.hostname:', typeof window !== 'undefined' ? window.location.hostname : 'N/A')
+console.log('[API] userAgent:', typeof navigator !== 'undefined' ? navigator.userAgent : 'N/A')
+console.log('=============================')
 
 // 创建axios实例
 const service = axios.create({
-  baseURL: '/api',
-  timeout: 30000,
+  baseURL,
+  timeout: 30000, // 30秒超时，适应移动端网络环境
   headers: {
     'Content-Type': 'application/json'
   }
@@ -19,6 +36,7 @@ service.interceptors.request.use(
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`
     }
+    console.log('[API 请求]', config.method?.toUpperCase(), config.baseURL + config.url)
     return config
   },
   error => {
@@ -67,7 +85,13 @@ service.interceptors.response.use(
     }
   },
   error => {
-    console.error('响应错误:', error)
+    console.error('=== 响应错误 ===')
+    console.error('error.message:', error.message)
+    console.error('error.code:', error.code)
+    console.error('error.config:', JSON.stringify(error.config, null, 2))
+    console.error('error.response:', error.response ? JSON.stringify({ status: error.response.status, data: error.response.data }, null, 2) : 'undefined')
+    console.error('error.request:', error.request ? 'exists' : 'undefined')
+
     let message = '网络错误，请稍后重试'
 
     if (error.response) {

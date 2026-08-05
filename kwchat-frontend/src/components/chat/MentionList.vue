@@ -35,7 +35,7 @@
         class="mention-item"
         @click="selectMention(member)"
       >
-        <el-avatar :size="32" :src="member.avatar">
+        <el-avatar :size="32" :src="getFullFileUrl(member.avatar)">
           {{ getAvatarFallback(member.nickname) }}
         </el-avatar>
         <div class="mention-info">
@@ -60,6 +60,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { User } from '@element-plus/icons-vue'
+import { getFullFileUrl } from '@/utils/platform'
 
 const props = defineProps({
   visible: {

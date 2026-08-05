@@ -15,6 +15,12 @@ const routes = [
     meta: { title: '注册', requiresAuth: false }
   },
   {
+    path: '/debug',
+    name: 'Debug',
+    component: () => import('@/views/debug/index.vue'),
+    meta: { title: '网络调试', requiresAuth: false }
+  },
+  {
     path: '/',
     component: () => import('@/layouts/MainLayout.vue'),
     redirect: '/chat',

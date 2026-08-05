@@ -106,6 +106,7 @@ import { ref, computed, nextTick, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import EmojiPanel from './EmojiPanel.vue'
 import MentionList from './MentionList.vue'
+import { isMobile as checkIsMobile } from '@/utils/platform'
 
 const props = defineProps({
   disabled: { type: Boolean, default: false },
@@ -185,51 +186,52 @@ const triggerImageUpload = () => { imageInputRef.value?.click() }
 const triggerFileUpload = () => { fileInputRef.value?.click() }
 const triggerVideoUpload = () => { videoInputRef.value?.click() }
 
-// 检测是否是移动设备
+// 检测是否是移动设备（使用平台工具）
 const isMobile = () => {
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+  return checkIsMobile()
+}
+
+// 检测是否是 iOS
+const isIOS = () => {
+  return /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
 }
 
 // 拍照
 const takePhoto = () => {
-  const input = document.createElement('input')
-  input.type = 'file'
-  input.accept = 'image/*'
-  if (isMobile()) {
-    input.capture = 'environment' // 手机使用后置摄像头
-  }
-  input.onchange = (e) => {
-    const file = e.target.files[0]
-    if (file) {
-      if (file.size > 10 * 1024 * 1024) {
-        ElMessage.error('图片大小不能超过10MB')
-        return
-      }
-      emit('send-image', file)
+  if (isIOS()) {
+    // iOS：使用模板中的 input，设置 capture 属性后触发
+    // iOS Safari 需要在用户手势的同步调用栈中触发 click
+    const input = imageInputRef.value
+    if (input) {
+      // 设置 capture 属性打开相机
+      input.setAttribute('capture', 'environment')
+      input.click()
+      // 拍照完成后移除 capture 属性（下次点击打开相册）
+      setTimeout(() => {
+        input.removeAttribute('capture')
+      }, 1000)
     }
+  } else {
+    // 非 iOS：使用模板中的 input
+    triggerImageUpload()
   }
-  input.click()
 }
 
 // 录制视频
 const recordVideo = () => {
-  const input = document.createElement('input')
-  input.type = 'file'
-  input.accept = 'video/*'
-  if (isMobile()) {
-    input.capture = 'environment'
-  }
-  input.onchange = (e) => {
-    const file = e.target.files[0]
-    if (file) {
-      if (file.size > 50 * 1024 * 1024) {
-        ElMessage.error('视频大小不能超过50MB')
-        return
-      }
-      emit('send-video', file)
+  if (isIOS()) {
+    const input = videoInputRef.value
+    if (input) {
+      input.setAttribute('capture', 'environment')
+      input.click()
+      setTimeout(() => {
+        input.removeAttribute('capture')
+      }, 1000)
     }
+  } else {
+    triggerVideoUpload()
   }
-  input.click()
 }
 
 // 切换录音状态（点击一次开始，再点击一次发送）
@@ -246,10 +248,16 @@ const toggleVoiceRecord = async () => {
 // 开始录音
 const startVoiceRecord = async () => {
   try {
+    // 检测是否在 Capacitor 环境中
+    const isCapacitorApp = window.Capacitor || window.location.protocol === 'capacitor:' ||
+      (window.location.protocol === 'https:' && window.location.hostname === 'localhost' &&
+       /Android|iPhone|iPad|iPod/i.test(navigator.userAgent))
+
     // 检查浏览器支持
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      // 检查是否是因为非 HTTPS 环境
-      if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+      if (isCapacitorApp) {
+        ElMessage.error('录音功能不可用，请重启应用后重试')
+      } else if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
         ElMessage.error('录音功能需要 HTTPS 环境，请使用 HTTPS 访问或联系管理员配置 SSL 证书')
       } else {
         ElMessage.error('您的浏览器不支持录音功能')
@@ -262,7 +270,44 @@ const startVoiceRecord = async () => {
       return
     }
 
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    // 请求麦克风权限
+    let stream
+    try {
+      // 先检查权限状态
+      if (navigator.permissions && navigator.permissions.query) {
+        try {
+          const permissionStatus = await navigator.permissions.query({ name: 'microphone' })
+          console.log('麦克风权限状态:', permissionStatus.state)
+          if (permissionStatus.state === 'denied') {
+            if (isCapacitorApp) {
+              ElMessage.error('麦克风权限被系统拒绝。请在手机"设置 → 应用 → 快伟通 → 权限"中开启麦克风权限，然后重启应用')
+            } else {
+              ElMessage.error('麦克风权限被拒绝。请在浏览器地址栏左侧的锁图标中允许麦克风权限')
+            }
+            return
+          }
+        } catch (e) {
+          // permissions.query 不支持 microphone 时忽略，继续尝试 getUserMedia
+          console.log('无法查询麦克风权限状态，继续尝试录音:', e.message)
+        }
+      }
+
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    } catch (permError) {
+      console.error('麦克风权限错误:', permError)
+      if (permError.name === 'NotAllowedError' || permError.name === 'PermissionDeniedError') {
+        if (isCapacitorApp) {
+          ElMessage.error('麦克风权限被拒绝。请在手机"设置 → 应用 → 快伟通 → 权限"中开启麦克风权限，然后重启应用')
+        } else {
+          ElMessage.error('麦克风权限被拒绝。请在浏览器地址栏左侧的锁图标中允许麦克风权限')
+        }
+      } else if (permError.name === 'NotFoundError') {
+        ElMessage.error('未找到麦克风设备，请确认设备有麦克风')
+      } else {
+        ElMessage.error('录音启动失败: ' + permError.message)
+      }
+      return
+    }
 
     // 使用兼容性更好的格式（优先mp4，因为Safari不支持webm）
     let mimeType = ''
@@ -326,8 +371,16 @@ const startVoiceRecord = async () => {
     ElMessage.success('开始录音，点击麦克风发送')
   } catch (error) {
     console.error('录音启动失败:', error)
+    const isCapacitorApp = window.Capacitor || window.location.protocol === 'capacitor:' ||
+      (window.location.protocol === 'https:' && window.location.hostname === 'localhost' &&
+       /Android|iPhone|iPad|iPod/i.test(navigator.userAgent))
+
     if (error.name === 'NotAllowedError') {
-      ElMessage.error('麦克风权限被拒绝，请在浏览器设置中允许访问麦克风')
+      if (isCapacitorApp) {
+        ElMessage.error('麦克风权限被拒绝。请在手机"设置 → 应用 → 快伟通 → 权限"中开启麦克风权限')
+      } else {
+        ElMessage.error('麦克风权限被拒绝。请在浏览器地址栏左侧的锁图标中允许麦克风权限')
+      }
     } else if (error.name === 'NotFoundError') {
       ElMessage.error('未找到麦克风设备')
     } else {
