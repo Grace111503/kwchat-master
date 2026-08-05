@@ -120,25 +120,26 @@ const loadUserInfo = async () => {
     return
   }
 
-  // 如果已有完整信息，直接使用
-  if (props.user.phone || props.user.email || props.user.birthday) {
-    userInfo.value = props.user
-    return
-  }
+  // 先设置基础信息，确保至少有头像和昵称显示
+  userInfo.value = { ...props.user }
 
   // 从 API 获取完整用户信息
   loading.value = true
   try {
+    console.log('获取用户详情, userId:', props.user.id)
     const res = await getUserDetail(props.user.id)
-    if (res.code === 200 && res.data) {
-      userInfo.value = res.data
+    console.log('用户详情响应:', res)
+
+    if (res && res.code === 200 && res.data) {
+      // 合并 API 返回的数据（保留基础信息作为兜底）
+      userInfo.value = { ...props.user, ...res.data }
+      console.log('用户信息加载成功:', userInfo.value)
     } else {
-      // 使用传入的基础信息
-      userInfo.value = props.user
+      console.warn('API 返回异常:', res)
     }
   } catch (error) {
     console.error('获取用户信息失败:', error)
-    userInfo.value = props.user
+    // 已经设置了基础信息，不需要再赋值
   } finally {
     loading.value = false
   }

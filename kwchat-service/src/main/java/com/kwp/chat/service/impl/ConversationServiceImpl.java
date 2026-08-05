@@ -142,10 +142,27 @@ public class ConversationServiceImpl implements ConversationService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void addConversationMember(Long conversationId, Long userId) {
+    public void addConversationMember(Long conversationId, Long userId, Long operatorId) {
         Conversation conversation = getConversation(conversationId);
 
-        // 检查是否已是成员
+        // 检查是否是群聊
+        if (!CommonConstant.CONVERSATION_TYPE_GROUP.equals(conversation.getConversationType())) {
+            throw new BusinessException(ResultCode.PARAM_ERROR, "不能向单聊会话添加成员");
+        }
+
+        // 检查操作者是否是群成员
+        ConversationMember operatorMember = conversationMemberMapper.selectByConversationIdAndUserId(conversationId, operatorId);
+        if (operatorMember == null) {
+            throw new BusinessException(ResultCode.NOT_GROUP_MEMBER);
+        }
+
+        // 检查操作者是否有权限（群主或管理员）
+        if (operatorMember.getRole() != CommonConstant.GROUP_ROLE_OWNER &&
+            operatorMember.getRole() != CommonConstant.GROUP_ROLE_ADMIN) {
+            throw new BusinessException(ResultCode.FORBIDDEN, "只有群主和管理员可以添加成员");
+        }
+
+        // 检查被添加的用户是否已是成员
         ConversationMember existingMember = conversationMemberMapper.selectByConversationIdAndUserId(conversationId, userId);
         if (existingMember != null) {
             throw new BusinessException(ResultCode.GROUP_MEMBER_ALREADY_EXISTS);

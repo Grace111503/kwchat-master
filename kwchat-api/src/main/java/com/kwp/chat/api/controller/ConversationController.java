@@ -72,9 +72,11 @@ public class ConversationController {
 
     @Operation(summary = "添加会话成员")
     @PostMapping("/{conversationId}/members")
-    public Result<Void> addConversationMember(@PathVariable Long conversationId,
+    public Result<Void> addConversationMember(HttpServletRequest request,
+                                              @PathVariable Long conversationId,
                                               @RequestParam Long userId) {
-        conversationService.addConversationMember(conversationId, userId);
+        Long currentUserId = getCurrentUserId(request);
+        conversationService.addConversationMember(conversationId, userId, currentUserId);
         return Result.success();
     }
 

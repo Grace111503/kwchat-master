@@ -35,6 +35,10 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/user/register",
                         "/user/refresh",
                         "/file/avatar/**",
+                        "/file/image/**",
+                        "/file/video/**",
+                        "/file/voice/**",
+                        "/file/document/**",
                         "/uploads/**",  // 静态资源不拦截
                         "/doc.html",
                         "/webjars/**",

@@ -38,7 +38,7 @@ public interface ConversationService {
     /**
      * 添加会话成员
      */
-    void addConversationMember(Long conversationId, Long userId);
+    void addConversationMember(Long conversationId, Long userId, Long operatorId);
 
     /**
      * 移除会话成员

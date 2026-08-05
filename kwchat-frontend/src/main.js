@@ -20,57 +20,45 @@ async function checkForUpdates() {
   // 仅在 Capacitor 环境下检查更新
   if (!isCapacitor()) {
     console.log('[Update] Not in Capacitor environment, skipping update check')
-    console.log('[Update] window.Capacitor:', window.Capacitor)
-    console.log('[Update] protocol:', window.location.protocol)
-    console.log('[Update] hostname:', window.location.hostname)
     return
   }
 
   console.log('[Update] Capacitor environment detected, checking for updates...')
 
   try {
-    // 动态导入 CapacitorUpdater
-    console.log('[Update] Importing CapacitorUpdater...')
     const { CapacitorUpdater } = await import('@capgo/capacitor-updater')
-    console.log('[Update] CapacitorUpdater imported successfully')
 
     // 从服务器获取最新版本
-    console.log('[Update] Fetching version info from server...')
     const response = await fetch('http://118.25.44.250:8080/api/uploads/updates/app-version.json')
-    console.log('[Update] Response status:', response.status)
     const latest = await response.json()
-    console.log('[Update] Latest version from server:', latest)
+    console.log('[Update] Latest version:', latest.version)
 
     const current = await CapacitorUpdater.currentVersion()
-    console.log('[Update] Current version:', current)
-
-    console.log(`[Update] Current version: ${current.version}, Latest: ${latest.version}`)
+    console.log('[Update] Current version:', current.version)
 
     if (current.version !== latest.version) {
       console.log(`[Update] New version available: ${latest.version}`)
 
-      // 静默下载
-      console.log('[Update] Downloading new version...')
+      // 下载新版本（静默）
       const bundle = await CapacitorUpdater.download({
         url: latest.url,
         version: latest.version
       })
-      console.log('[Update] Download complete:', bundle)
 
       // 设置下次启动使用新版本
       await CapacitorUpdater.set(bundle)
-      console.log('[Update] Update ready, will apply on next restart')
+      console.log('[Update] Update downloaded, will apply on next restart')
+
+      // 保存更新信息到 localStorage，下次进入时提示
+      localStorage.setItem('kwchat_update_notes', latest.notes || '新版本已更新')
+      localStorage.setItem('kwchat_new_version', latest.version)
     } else {
       console.log('[Update] App is up to date')
     }
   } catch (error) {
-    console.error('[Update] Check failed:', error)
-    console.error('[Update] Error message:', error.message)
-    console.error('[Update] Error stack:', error.stack)
+    console.error('[Update] Check failed:', error.message)
     // 更新检查失败不影响 App 正常使用
   }
-
-  console.log('[Update] ===== Update check finished =====')
 }
 
 // Capacitor 环境下禁用 Service Worker，防止缓存干扰 API 请求

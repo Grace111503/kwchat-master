@@ -103,7 +103,7 @@
 
 <script setup>
 import { ref, computed, nextTick, watch } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import EmojiPanel from './EmojiPanel.vue'
 import MentionList from './MentionList.vue'
 import { isMobile as checkIsMobile } from '@/utils/platform'
@@ -270,34 +270,25 @@ const startVoiceRecord = async () => {
       return
     }
 
-    // 请求麦克风权限
+    // 直接尝试获取麦克风流，不做预检（Capacitor WebView 中 permissions.query 不可靠）
     let stream
     try {
-      // 先检查权限状态
-      if (navigator.permissions && navigator.permissions.query) {
-        try {
-          const permissionStatus = await navigator.permissions.query({ name: 'microphone' })
-          console.log('麦克风权限状态:', permissionStatus.state)
-          if (permissionStatus.state === 'denied') {
-            if (isCapacitorApp) {
-              ElMessage.error('麦克风权限被系统拒绝。请在手机"设置 → 应用 → 快伟通 → 权限"中开启麦克风权限，然后重启应用')
-            } else {
-              ElMessage.error('麦克风权限被拒绝。请在浏览器地址栏左侧的锁图标中允许麦克风权限')
-            }
-            return
-          }
-        } catch (e) {
-          // permissions.query 不支持 microphone 时忽略，继续尝试 getUserMedia
-          console.log('无法查询麦克风权限状态，继续尝试录音:', e.message)
-        }
-      }
-
       stream = await navigator.mediaDevices.getUserMedia({ audio: true })
     } catch (permError) {
       console.error('麦克风权限错误:', permError)
       if (permError.name === 'NotAllowedError' || permError.name === 'PermissionDeniedError') {
         if (isCapacitorApp) {
-          ElMessage.error('麦克风权限被拒绝。请在手机"设置 → 应用 → 快伟通 → 权限"中开启麦克风权限，然后重启应用')
+          try {
+            const { App } = await import('@capacitor/app')
+            await ElMessageBox.confirm(
+              '录音需要麦克风权限，请在设置中允许后重试',
+              '权限申请',
+              { confirmButtonText: '去设置', cancelButtonText: '取消', type: 'warning' }
+            )
+            await App.openAppSettings()
+          } catch (e) {
+            // 用户取消
+          }
         } else {
           ElMessage.error('麦克风权限被拒绝。请在浏览器地址栏左侧的锁图标中允许麦克风权限')
         }
@@ -377,7 +368,17 @@ const startVoiceRecord = async () => {
 
     if (error.name === 'NotAllowedError') {
       if (isCapacitorApp) {
-        ElMessage.error('麦克风权限被拒绝。请在手机"设置 → 应用 → 快伟通 → 权限"中开启麦克风权限')
+        try {
+          const { App } = await import('@capacitor/app')
+          await ElMessageBox.confirm(
+            '需要麦克风权限才能录音，是否前往设置开启？',
+            '权限申请',
+            { confirmButtonText: '去设置', cancelButtonText: '取消', type: 'warning' }
+          )
+          await App.openAppSettings()
+        } catch (e) {
+          // 用户取消
+        }
       } else {
         ElMessage.error('麦克风权限被拒绝。请在浏览器地址栏左侧的锁图标中允许麦克风权限')
       }

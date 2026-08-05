@@ -483,7 +483,9 @@ const handleSendVideo = async (file) => {
 const handleSendVoice = async (file) => {
   if (!chatStore.currentConversation) return
   try {
+    console.log('[Chat] 开始上传语音:', file.name, file.type, file.size)
     const res = await uploadVoice(file)
+    console.log('[Chat] 语音上传响应:', res)
     if (res.code === 200) {
       // 使用录音时长，如果有的话
       const duration = file.recordingDuration || await getAudioDuration(file)
@@ -495,9 +497,13 @@ const handleSendVoice = async (file) => {
         duration: duration
       })
       scrollToBottom()
+    } else {
+      console.error('[Chat] 语音上传失败:', res.message)
+      ElMessage.error('语音发送失败: ' + (res.message || '未知错误'))
     }
   } catch (error) {
-    ElMessage.error('语音发送失败')
+    console.error('[Chat] 语音上传异常:', error)
+    ElMessage.error('语音发送失败: ' + (error.message || '网络错误'))
   }
 }
 
@@ -1213,13 +1219,12 @@ onUnmounted(() => {
   }
 
   .back-btn {
-    font-size: 20px;
+    font-size: 24px;
     cursor: pointer;
-    margin-right: 8px;
     color: #333;
     // 增大点击区域
-    padding: 8px;
-    margin: -8px 8px -8px 0;
+    padding: 12px;
+    margin: -12px 8px -12px 0;
   }
 
   .chat-title .name {

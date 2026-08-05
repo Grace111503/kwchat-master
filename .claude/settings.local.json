@@ -105,7 +105,9 @@
       "Bash(find /d -maxdepth 3 -name \"jdk*17*\" -type d)",
       "Bash(/d/jdk-8u361-linux-x64/jdk17/bin/java *)",
       "Bash(mvn -version)",
-      "Bash(/d/Tools/JDK17/bin/java *)"
+      "Bash(/d/Tools/JDK17/bin/java *)",
+      "Bash(mvn clean *)",
+      "Bash(scp *)"
     ]
   }
 }

@@ -45,6 +45,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
 
     <!-- 旧存储权限：仅Android12(API32)及以下使用 -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"

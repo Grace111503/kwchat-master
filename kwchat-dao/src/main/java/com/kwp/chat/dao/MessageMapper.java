@@ -15,9 +15,9 @@ import java.util.List;
 public interface MessageMapper extends BaseMapper<Message> {
 
     /**
-     * 查询会话消息列表（分页）
+     * 查询会话消息列表（分页）- 排除已删除(status=2)和已撤回(status=1)的消息
      */
-    @Select("SELECT * FROM chat_message WHERE conversation_id = #{conversationId} AND deleted = 0 AND status != 2 " +
+    @Select("SELECT * FROM chat_message WHERE conversation_id = #{conversationId} AND deleted = 0 AND status = 0 " +
             "ORDER BY create_time DESC LIMIT #{limit} OFFSET #{offset}")
     List<Message> selectByConversationId(@Param("conversationId") Long conversationId, @Param("limit") int limit, @Param("offset") int offset);
 

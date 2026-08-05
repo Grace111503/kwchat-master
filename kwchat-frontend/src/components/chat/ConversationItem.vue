@@ -130,12 +130,17 @@ const handleClick = () => {
 }
 
 const handleTouchStart = (e) => {
+  // 只处理单指触摸
+  if (e.touches.length !== 1) return
   touchStartX.value = e.touches[0].clientX
   touchCurrentX.value = e.touches[0].clientX
   console.log('触摸开始:', touchStartX.value)
 }
 
 const handleTouchMove = (e) => {
+  // 只处理单指触摸
+  if (e.touches.length !== 1) return
+
   touchCurrentX.value = e.touches[0].clientX
   const diff = touchStartX.value - touchCurrentX.value
   console.log('触摸移动，差值:', diff)
@@ -148,7 +153,7 @@ const handleTouchMove = (e) => {
   }
 }
 
-const handleTouchEnd = () => {
+const handleTouchEnd = (e) => {
   console.log('触摸结束，当前状态:', isSwiped.value)
   // 如果滑动距离不够，恢复原状
   const diff = touchStartX.value - touchCurrentX.value
@@ -344,6 +349,7 @@ const formatTime = (time) => {
 <style lang="scss" scoped>
 .conversation-item-wrapper {
   position: relative;
+  overflow: hidden;
 }
 
 .conversation-item {
@@ -381,15 +387,13 @@ const formatTime = (time) => {
   }
 }
 
-// 移动端左滑按钮
+// 移动端左滑按钮（默认隐藏在屏幕右侧外）
 .swipe-actions {
   position: absolute;
-  right: 0;
+  right: -120px;
   top: 0;
   bottom: 0;
   display: flex;
-  z-index: 1;
-  transform: translateX(100%);
 
   .swipe-btn {
     display: flex;
@@ -411,15 +415,6 @@ const formatTime = (time) => {
 
     &.delete-btn {
       background: #f56c6c;
-    }
-  }
-}
-
-// 移动端左滑时显示按钮
-@media (max-width: 768px) {
-  .conversation-item.swiped {
-    .swipe-actions {
-      transform: translateX(0);
     }
   }
 }

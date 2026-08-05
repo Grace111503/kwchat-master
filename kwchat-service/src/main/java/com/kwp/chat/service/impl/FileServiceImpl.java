@@ -53,7 +53,8 @@ public class FileServiceImpl implements FileService {
      * 允许的语音类型
      */
     private static final List<String> ALLOWED_VOICE_TYPES = Arrays.asList(
-            "audio/mpeg", "audio/wav", "audio/ogg", "audio/aac", "audio/amr"
+            "audio/mpeg", "audio/wav", "audio/ogg", "audio/aac", "audio/amr",
+            "audio/mp4", "audio/webm", "audio/x-m4a", "audio/mp4a-latm"
     );
 
     @Override
@@ -144,9 +145,15 @@ public class FileServiceImpl implements FileService {
 
     @Override
     public FileUploadResponse uploadVoice(MultipartFile file) {
-        // 验证语音类型
-        if (!isAllowedFileType(file.getContentType(), "voice")) {
-            throw new BusinessException(ResultCode.FILE_TYPE_NOT_SUPPORTED, "不支持的语音格式");
+        // 记录上传信息用于调试
+        log.info("上传语音文件: fileName={}, contentType={}, size={}",
+                file.getOriginalFilename(), file.getContentType(), file.getSize());
+
+        // 验证语音类型（宽松检查：只要有audio/前缀就允许）
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("audio/")) {
+            log.warn("不支持的语音格式: contentType={}", contentType);
+            throw new BusinessException(ResultCode.FILE_TYPE_NOT_SUPPORTED, "不支持的语音格式: " + contentType);
         }
 
         // 验证语音大小

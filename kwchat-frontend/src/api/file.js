@@ -1,4 +1,5 @@
 import request from '@/utils/request'
+import { isCapacitor } from '@/utils/platform'
 
 /**
  * 上传图片
@@ -36,8 +37,9 @@ export function uploadVideo(file) {
  * 上传语音
  */
 export function uploadVoice(file) {
+  console.log('[File] 上传语音:', file.name, file.type, file.size, '字节')
   const formData = new FormData()
-  formData.append('file', file)
+  formData.append('file', file, file.name)
   return request({
     url: '/file/voice',
     method: 'post',
