@@ -10,7 +10,7 @@ spring:
     active: dev
   web:
     resources:
-      static-locations: classpath:/static/,file:///opt/kwchat/uploads/
+      static-locations: classpath:/static/,file:///D:/KuaiTong/kwchat/uploads/
 
   # 数据源配置
   datasource:
@@ -153,8 +153,8 @@ file:
   storage:
     type: local
     local:
-      # 服务器路径（Linux）
-      path: /opt/kwchat/uploads
+      # 服务器路径（Windows）
+      path: D:/KuaiTong/kwchat/uploads
       url-prefix: /uploads
 
 #Spring AI 配置(使用OpenAI兼容接口)

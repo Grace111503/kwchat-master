@@ -214,7 +214,7 @@ export function getFullFileUrl(url) {
   // 如果是相对路径（以/开头）
   if (url.startsWith('/')) {
     if (isCapacitor()) {
-      // 头像文件使用 /api/file/avatar/ 端点
+      // 头像文件使用 /api/file/avatar/ 端点（保持原有逻辑）
       if (url.startsWith('/uploads/avatar/')) {
         const fileName = url.split('/').pop()
         return getServerUrl() + '/file/avatar/' + fileName

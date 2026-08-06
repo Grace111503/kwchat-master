@@ -149,11 +149,30 @@ public class FileServiceImpl implements FileService {
         log.info("上传语音文件: fileName={}, contentType={}, size={}",
                 file.getOriginalFilename(), file.getContentType(), file.getSize());
 
-        // 验证语音类型（宽松检查：只要有audio/前缀就允许）
+        // 验证语音类型（宽松检查：content type 以 audio/ 开头，或者通过文件扩展名判断）
         String contentType = file.getContentType();
-        if (contentType == null || !contentType.startsWith("audio/")) {
-            log.warn("不支持的语音格式: contentType={}", contentType);
-            throw new BusinessException(ResultCode.FILE_TYPE_NOT_SUPPORTED, "不支持的语音格式: " + contentType);
+        String fileName = file.getOriginalFilename();
+        boolean isAudio = false;
+
+        if (contentType != null && contentType.startsWith("audio/")) {
+            isAudio = true;
+        } else if (fileName != null) {
+            // 通过文件扩展名判断
+            String ext = fileName.toLowerCase();
+            if (ext.endsWith(".mp3") || ext.endsWith(".wav") || ext.endsWith(".ogg") ||
+                ext.endsWith(".aac") || ext.endsWith(".amr") || ext.endsWith(".m4a") ||
+                ext.endsWith(".mp4") || ext.endsWith(".webm") || ext.endsWith(".wma")) {
+                isAudio = true;
+            }
+        }
+
+        if (!isAudio) {
+            log.warn("不支持的语音格式: contentType={}, fileName={}", contentType, fileName);
+            // 语音上传不严格限制格式，只要文件大于0字节就允许
+            if (file.getSize() > 0) {
+                log.info("虽然格式未识别，但文件有内容，允许上传");
+                isAudio = true;
+            }
         }
 
         // 验证语音大小

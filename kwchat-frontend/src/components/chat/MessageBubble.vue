@@ -303,13 +303,9 @@ const playVoice = async () => {
       const errorMsg = e.target.error?.message || '未知错误'
       console.error('音频播放错误:', errorCode, errorMsg)
 
-      // 如果直接播放失败，尝试 fetch + blob 方式
-      if (errorCode === 4 || errorMsg.includes('Unsupported')) {
-        console.log('直接播放失败，尝试 fetch + blob 方式...')
-        playVoiceViaFetch(voiceUrl, detectedType)
-      } else {
-        ElMessage.error('语音播放失败: ' + errorMsg)
-      }
+      // 直接播放失败时静默尝试 fetch + blob 方式
+      console.log('直接播放失败，尝试 fetch + blob 方式...')
+      playVoiceViaFetch(voiceUrl, detectedType)
     }
 
     console.log('开始播放...')
@@ -319,16 +315,12 @@ const playVoice = async () => {
     isPlaying.value = false
     console.error('语音播放失败:', e)
 
-    // 尝试 fetch + blob 方式
-    if (e.message && (e.message.includes('user agent') || e.message.includes('permission') || e.message.includes('NotAllowed'))) {
-      console.log('直接播放被阻止，尝试 fetch + blob 方式...')
-      const voiceUrl = getFileUrl(props.message.fileUrl)
-      const ext = voiceUrl.split('.').pop().split('?')[0].toLowerCase()
-      const mimeTypes = { 'webm': 'audio/webm', 'm4a': 'audio/mp4', 'mp4': 'audio/mp4', 'mp3': 'audio/mpeg' }
-      playVoiceViaFetch(voiceUrl, mimeTypes[ext] || 'audio/mpeg')
-    } else {
-      ElMessage.error('语音播放失败: ' + e.message)
-    }
+    // 静默尝试 fetch + blob 方式
+    console.log('尝试 fetch + blob 方式播放...')
+    const voiceUrl = getFileUrl(props.message.fileUrl)
+    const ext = voiceUrl.split('.').pop().split('?')[0].toLowerCase()
+    const mimeTypes = { 'webm': 'audio/webm', 'm4a': 'audio/mp4', 'mp4': 'audio/mp4', 'mp3': 'audio/mpeg' }
+    playVoiceViaFetch(voiceUrl, mimeTypes[ext] || 'audio/mpeg')
   }
 }
 

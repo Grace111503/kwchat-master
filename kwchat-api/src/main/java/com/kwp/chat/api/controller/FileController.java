@@ -34,7 +34,7 @@ public class FileController {
     private final MinioUtils minioUtils;
     private final MinioConfig minioConfig;
 
-    @Value("${file.storage.local.path:/opt/kwchat/uploads}")
+    @Value("${file.storage.local.path:D:/KuaiTong/kwchat/uploads}")
     private String uploadPath;
 
     @Operation(summary = "上传图片")
@@ -98,142 +98,80 @@ public class FileController {
     @Operation(summary = "获取头像文件")
     @GetMapping("/avatar/{fileName}")
     public void getAvatar(@PathVariable String fileName, HttpServletResponse response) {
+        serveFile(Paths.get(uploadPath, "avatar", fileName).toFile(), "image/jpeg", response);
+    }
+
+    @Operation(summary = "获取图片文件")
+    @GetMapping("/image/{fileName}")
+    public void getImage(@PathVariable String fileName, HttpServletResponse response) {
+        File file = Paths.get(uploadPath, "image", fileName).toFile();
+        serveFile(file, getContentType(fileName), response);
+    }
+
+    @Operation(summary = "获取图片文件（支持完整路径）")
+    @GetMapping("/image/path/{filePath:.+}")
+    public void getImageByPath(@PathVariable String filePath, HttpServletResponse response) {
+        File file = Paths.get(uploadPath, "image", filePath).toFile();
+        serveFile(file, getContentType(filePath), response);
+    }
+
+    @Operation(summary = "获取视频文件")
+    @GetMapping("/video/{fileName}")
+    public void getVideo(@PathVariable String fileName, HttpServletResponse response) {
+        File file = Paths.get(uploadPath, "video", fileName).toFile();
+        serveFile(file, getContentType(fileName), response);
+    }
+
+    @Operation(summary = "获取视频文件（支持完整路径）")
+    @GetMapping("/video/path/{filePath:.+}")
+    public void getVideoByPath(@PathVariable String filePath, HttpServletResponse response) {
+        File file = Paths.get(uploadPath, "video", filePath).toFile();
+        serveFile(file, getContentType(filePath), response);
+    }
+
+    @Operation(summary = "获取语音文件")
+    @GetMapping("/voice/{fileName}")
+    public void getVoice(@PathVariable String fileName, HttpServletResponse response) {
+        File file = Paths.get(uploadPath, "voice", fileName).toFile();
+        serveFile(file, getContentType(fileName), response);
+    }
+
+    @Operation(summary = "获取语音文件（支持完整路径）")
+    @GetMapping("/voice/path/{filePath:.+}")
+    public void getVoiceByPath(@PathVariable String filePath, HttpServletResponse response) {
+        File file = Paths.get(uploadPath, "voice", filePath).toFile();
+        serveFile(file, getContentType(filePath), response);
+    }
+
+    @Operation(summary = "获取文档文件")
+    @GetMapping("/document/{fileName}")
+    public void getDocument(@PathVariable String fileName, HttpServletResponse response) {
+        File file = Paths.get(uploadPath, "file", fileName).toFile();
+        serveFile(file, getContentType(fileName), response);
+    }
+
+    @Operation(summary = "获取文档文件（支持完整路径）")
+    @GetMapping("/document/path/{filePath:.+}")
+    public void getDocumentByPath(@PathVariable String filePath, HttpServletResponse response) {
+        File file = Paths.get(uploadPath, "file", filePath).toFile();
+        serveFile(file, getContentType(filePath), response);
+    }
+
+    /**
+     * 通用文件服务方法
+     */
+    private void serveFile(File file, String contentType, HttpServletResponse response) {
         try {
-            // 使用配置的上传路径
-            Path filePath = Paths.get(uploadPath, "avatar", fileName);
-            File file = filePath.toFile();
             if (!file.exists()) {
                 response.setStatus(HttpServletResponse.SC_NOT_FOUND);
                 return;
             }
 
             // 设置响应头
-            response.setContentType("image/jpeg");
-            response.setContentLength((int) file.length());
-
-            // 写入响应
-            try (FileInputStream fis = new FileInputStream(file);
-                 OutputStream os = response.getOutputStream()) {
-                byte[] buffer = new byte[4096];
-                int bytesRead;
-                while ((bytesRead = fis.read(buffer)) != -1) {
-                    os.write(buffer, 0, bytesRead);
-                }
-            }
-        } catch (Exception e) {
-            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    @Operation(summary = "获取图片文件")
-    @GetMapping("/image/{fileName}")
-    public void getImage(@PathVariable String fileName, HttpServletResponse response) {
-        try {
-            // 使用配置的上传路径
-            Path filePath = Paths.get(uploadPath, "image", fileName);
-            File file = filePath.toFile();
-            if (!file.exists()) {
-                response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-                return;
-            }
-
-            // 根据文件扩展名设置响应头
-            String contentType = getContentType(fileName);
             response.setContentType(contentType);
             response.setContentLength((int) file.length());
-
-            // 写入响应
-            try (FileInputStream fis = new FileInputStream(file);
-                 OutputStream os = response.getOutputStream()) {
-                byte[] buffer = new byte[4096];
-                int bytesRead;
-                while ((bytesRead = fis.read(buffer)) != -1) {
-                    os.write(buffer, 0, bytesRead);
-                }
-            }
-        } catch (Exception e) {
-            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    @Operation(summary = "获取视频文件")
-    @GetMapping("/video/{fileName}")
-    public void getVideo(@PathVariable String fileName, HttpServletResponse response) {
-        try {
-            // 使用配置的上传路径
-            Path filePath = Paths.get(uploadPath, "video", fileName);
-            File file = filePath.toFile();
-            if (!file.exists()) {
-                response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-                return;
-            }
-
-            // 根据文件扩展名设置响应头
-            String contentType = getContentType(fileName);
-            response.setContentType(contentType);
-            response.setContentLength((int) file.length());
-
-            // 写入响应
-            try (FileInputStream fis = new FileInputStream(file);
-                 OutputStream os = response.getOutputStream()) {
-                byte[] buffer = new byte[4096];
-                int bytesRead;
-                while ((bytesRead = fis.read(buffer)) != -1) {
-                    os.write(buffer, 0, bytesRead);
-                }
-            }
-        } catch (Exception e) {
-            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    @Operation(summary = "获取语音文件")
-    @GetMapping("/voice/{fileName}")
-    public void getVoice(@PathVariable String fileName, HttpServletResponse response) {
-        try {
-            // 使用配置的上传路径
-            Path filePath = Paths.get(uploadPath, "voice", fileName);
-            File file = filePath.toFile();
-            if (!file.exists()) {
-                response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-                return;
-            }
-
-            // 根据文件扩展名设置响应头
-            String contentType = getContentType(fileName);
-            response.setContentType(contentType);
-            response.setContentLength((int) file.length());
-
-            // 写入响应
-            try (FileInputStream fis = new FileInputStream(file);
-                 OutputStream os = response.getOutputStream()) {
-                byte[] buffer = new byte[4096];
-                int bytesRead;
-                while ((bytesRead = fis.read(buffer)) != -1) {
-                    os.write(buffer, 0, bytesRead);
-                }
-            }
-        } catch (Exception e) {
-            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    @Operation(summary = "获取文档文件")
-    @GetMapping("/document/{fileName}")
-    public void getDocument(@PathVariable String fileName, HttpServletResponse response) {
-        try {
-            // 使用配置的上传路径
-            Path filePath = Paths.get(uploadPath, "file", fileName);
-            File file = filePath.toFile();
-            if (!file.exists()) {
-                response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-                return;
-            }
-
-            // 根据文件扩展名设置响应头
-            String contentType = getContentType(fileName);
-            response.setContentType(contentType);
-            response.setContentLength((int) file.length());
+            response.setHeader("Cache-Control", "max-age=31536000");
+            response.setHeader("Access-Control-Allow-Origin", "*");
 
             // 写入响应
             try (FileInputStream fis = new FileInputStream(file);
