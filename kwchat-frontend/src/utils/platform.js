@@ -196,8 +196,22 @@ export function getAppVersion() {
 export function getFullFileUrl(url) {
   if (!url) return ''
 
-  // 如果已经是完整URL，直接返回
+  // 如果已经是完整URL
   if (url.startsWith('http://') || url.startsWith('https://')) {
+    // Capacitor 环境下，将服务器地址的 URL 转换为正确的 API 格式
+    if (isCapacitor()) {
+      // 匹配 http(s)://118.25.44.250/uploads/{type}/{filename} 格式的 URL
+      const serverPattern = /https?:\/\/118\.25\.44\.250(:\d+)?\/uploads\/(image|video|voice|file|avatar)\/(.+)/
+      const match = url.match(serverPattern)
+      if (match) {
+        const fileType = match[2]  // image, video, voice, file, avatar
+        const fileName = match[3]  // 文件名
+        return 'http://118.25.44.250:8080/api/file/' + fileType + '/' + fileName
+      }
+      // 其他完整URL直接返回
+      return url
+    }
+    // 浏览器环境直接返回
     return url
   }
 
