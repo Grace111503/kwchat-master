@@ -5,11 +5,13 @@ import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.webkit.PermissionRequest;
 import android.webkit.WebChromeClient;
+import android.webkit.WebSettings;
 import android.webkit.WebView;
 
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import com.getcapacitor.Bridge;
 import com.getcapacitor.BridgeActivity;
 import ee.forgr.capacitor_updater.CapacitorUpdaterPlugin;
 
@@ -27,8 +29,38 @@ public class MainActivity extends BridgeActivity {
         // 注册 CapacitorUpdater 插件
         registerPlugin(CapacitorUpdaterPlugin.class);
 
+        // 配置 WebView 设置，确保在 Capacitor 环境下可以正常加载 HTTP 图片/头像
+        configureWebViewSettings();
+
         // 启动时主动请求运行时权限（麦克风、相机等）
         requestAppPermissions();
+    }
+
+    /**
+     * 配置 WebView 设置
+     * - 允许混合内容加载（https 下加载 http 图片）
+     * - 启用 DOM 存储和数据库
+     * - 允许文件访问
+     */
+    private void configureWebViewSettings() {
+        Bridge bridge = getBridge();
+        if (bridge != null && bridge.getWebView() != null) {
+            WebSettings settings = bridge.getWebView().getSettings();
+            // 允许混合内容加载（HTTP 资源）
+            settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+            // 启用 DOM 存储
+            settings.setDomStorageEnabled(true);
+            // 启用数据库
+            settings.setDatabaseEnabled(true);
+            // 允许文件访问（头像等本地文件）
+            settings.setAllowFileAccess(true);
+            settings.setAllowContentAccess(true);
+            // 允许通过 file:// scheme 加载内容
+            settings.setAllowFileAccessFromFileURLs(true);
+            settings.setAllowUniversalAccessFromFileURLs(true);
+            // 缓存模式
+            settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+        }
     }
 
     /**

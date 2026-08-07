@@ -1,0 +1,6 @@
+{
+  "version": "1.0.10",
+  "url": "http://118.25.44.250:8080/api/uploads/updates/app-v1.0.10.zip",
+  "notes": "修复图片视频语音显示",
+  "forceUpdate": true
+}

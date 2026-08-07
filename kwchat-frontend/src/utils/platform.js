@@ -40,14 +40,20 @@ export function isCapacitor() {
       return true
     }
 
-    // https 协议 + localhost（Capacitor 的 androidScheme: "https" 配置）
-    if (protocol === 'https:' && hostname === 'localhost') {
-      console.log('[Platform] Method 2b: https://localhost detected')
+    // http/https 协议 + localhost（Capacitor 的 androidScheme: "http" 或 "https" 配置）
+    if ((protocol === 'http:' || protocol === 'https:') && hostname === 'localhost') {
+      console.log('[Platform] Method 2b: localhost detected via', protocol)
       // 额外检查：是否在 Capacitor 的 WebView 中
-      // Capacitor WebView 通常有特定的 user agent
       const lowerUA = userAgent.toLowerCase()
+      // 方法 A: UA 包含 capacitor 标志
       if (lowerUA.includes('capacitor') || lowerUA.includes('wv')) {
-        console.log('[Platform] Method 2b: Capacitor/WV user agent detected')
+        console.log('[Platform] Method 2b-A: Capacitor/WV user agent detected')
+        _isCapacitor = true
+        return true
+      }
+      // 方法 B: 检测 Capacitor Bridge 对象（最可靠的方式）
+      if (typeof window !== 'undefined' && window.Capacitor && (window.Capacitor.Plugins || window.Capacitor.Bridge)) {
+        console.log('[Platform] Method 2b-B: Capacitor Bridge object detected')
         _isCapacitor = true
         return true
       }
@@ -196,77 +202,63 @@ export function getAppVersion() {
 export function getFullFileUrl(url) {
   if (!url) return ''
 
-  // 如果已经是完整URL
-  if (url.startsWith('http://') || url.startsWith('https://')) {
-    // Capacitor 环境下，将服务器地址的 URL 转换为正确的 API 格式
-    if (isCapacitor()) {
-      // 匹配 http(s)://118.25.44.250/uploads/{type}/{filename} 格式的 URL
-      const serverPattern = /https?:\/\/118\.25\.44\.250(:\d+)?\/uploads\/(image|video|voice|file|avatar)\/(.+)/
-      const match = url.match(serverPattern)
-      if (match) {
-        const fileType = match[2]  // image, video, voice, file, avatar
-        const fileName = match[3]  // 文件名
-        return 'http://118.25.44.250:8080/api/file/' + fileType + '/' + fileName
-      }
-      // 其他完整URL直接返回
-      return url
-    }
-    // 浏览器环境直接返回
-    return url
-  }
+  const capEnv = isCapacitor()
 
-  // 获取服务器地址
-  const getServerUrl = () => {
-    if (isCapacitor()) {
+  // 统一的服务器基地址获取（避免重复代码）
+  const getServerBase = () => {
+    if (capEnv) {
       const apiUrl = import.meta.env.VITE_API_SERVER_URL || 'http://118.25.44.250:8080/api'
-      // 确保以 /api 结尾
-      return apiUrl.endsWith('/api') ? apiUrl : apiUrl + '/api'
+      return apiUrl.endsWith('/api') ? apiUrl.slice(0, -4) : apiUrl
     }
     return ''
   }
 
-  // 如果是相对路径（以/开头）
-  if (url.startsWith('/')) {
-    if (isCapacitor()) {
-      // 头像文件使用 /api/file/avatar/ 端点（保持原有逻辑）
-      if (url.startsWith('/uploads/avatar/')) {
-        const fileName = url.split('/').pop()
-        return getServerUrl() + '/file/avatar/' + fileName
+  // 从路径中提取不含查询参数的文件名
+  const extractFileName = (path) => {
+    const lastSeg = path.split('/').pop() || ''
+    return lastSeg.split('?')[0]
+  }
+
+  // 如果已经是完整 URL
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    if (capEnv) {
+      // 匹配 http(s)://host:port/uploads/{type}/{fileName} 格式
+      const pattern = /https?:\/\/[^/]+\/uploads\/(image|video|voice|file|avatar)\/([^/?]+)/
+      const match = url.match(pattern)
+      if (match) {
+        return getServerBase() + '/api/file/' + match[1] + '/' + match[2]
       }
-      // 图片文件使用 /api/file/image/ 端点
-      if (url.startsWith('/uploads/image/')) {
-        const fileName = url.split('/').pop()
-        return getServerUrl() + '/file/image/' + fileName
-      }
-      // 视频文件使用 /api/file/video/ 端点
-      if (url.startsWith('/uploads/video/')) {
-        const fileName = url.split('/').pop()
-        return getServerUrl() + '/file/video/' + fileName
-      }
-      // 语音文件使用 /api/file/voice/ 端点
-      if (url.startsWith('/uploads/voice/')) {
-        const fileName = url.split('/').pop()
-        return getServerUrl() + '/file/voice/' + fileName
-      }
-      // 其他文件使用 /api/file/document/ 端点
-      if (url.startsWith('/uploads/file/')) {
-        const fileName = url.split('/').pop()
-        return getServerUrl() + '/file/document/' + fileName
-      }
-      // 其他文件使用静态资源路径
-      return getServerUrl() + url
+      // 已指向 /api/file/xxx 的 URL 直接返回
+      if (url.includes('/api/file/')) return url
+      return url
     }
     return url
   }
 
-  // 如果是旧的MinIO格式，转换为本地路径
-  const minioPattern = /https?:\/\/[^/]+:\d+\/[^/]+\/([^?]+)/
-  const match = url.match(minioPattern)
-  if (match) {
-    const path = match[1]
-    return getFullFileUrl('/uploads/' + path)
+  // 以 /uploads/xxx 开头的相对路径
+  if (url.startsWith('/uploads/')) {
+    if (capEnv) {
+      const fileType = url.split('/')[2] // avatar | image | video | voice | file
+      const fileName = extractFileName(url)
+      const typeMap = { avatar: 'avatar', image: 'image', video: 'video', voice: 'voice', file: 'document' }
+      const endpoint = typeMap[fileType] || 'document'
+      return getServerBase() + '/api/file/' + endpoint + '/' + fileName
+    }
+    // 浏览器环境：相对路径直接使用（走 Vite 代理到后端）
+    return url
   }
 
-  // 其他情况直接返回
+  // 其他以 / 开头的路径
+  if (url.startsWith('/')) {
+    return capEnv ? (getServerBase() + url) : url
+  }
+
+  // 旧的 MinIO 格式
+  const minioPattern = /https?:\/\/[^/]+:\d+\/[^/]+\/([^?]+)/
+  const minioMatch = url.match(minioPattern)
+  if (minioMatch) {
+    return getFullFileUrl('/uploads/' + minioMatch[1])
+  }
+
   return url
 }
