@@ -107,7 +107,8 @@
       "Bash(mvn -version)",
       "Bash(/d/Tools/JDK17/bin/java *)",
       "Bash(mvn clean *)",
-      "Bash(scp *)"
+      "Bash(scp *)",
+      "Bash(tar -a -cf ../app-v1.0.16.zip *)"
     ]
   }
 }

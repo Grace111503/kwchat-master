@@ -32,9 +32,6 @@ html, body {
 // 禁止文本选择（移动端）
 .no-select {
   -webkit-touch-callout: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
   user-select: none;
 }
 
@@ -111,7 +108,6 @@ html, body {
   -webkit-overflow-scrolling: touch;
   // 隐藏滚动条（移动端）
   scrollbar-width: none;
-  -ms-overflow-style: none;
 
   &::-webkit-scrollbar {
     display: none;

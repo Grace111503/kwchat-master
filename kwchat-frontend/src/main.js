@@ -13,6 +13,7 @@ import './styles/index.scss'
 import './styles/responsive.scss'
 import './styles/mobile.scss'
 
+
 // 热更新：检查新版本
 async function checkForUpdates() {
   console.log('[Update] ===== Starting update check =====')
@@ -90,9 +91,10 @@ const app = createApp(App)
 for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
   app.component(key, component)
 }
+app.use(ElementPlus)//使用Element Plus
 
 app.use(createPinia())
 app.use(router)
-app.use(ElementPlus, { locale: zhCn })
+app.use(ElementPlus, { locale: zhCn })//使用Element Plus，传入参数，语言为中文
 
-app.mount('#app')
+app.mount('#app')//挂载到#app

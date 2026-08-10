@@ -6,6 +6,7 @@
   },
   "dependencies": {
     "@capacitor/android": "^8.5.0",
-    "@capgo/capacitor-updater": "^8.51.3"
+    "@capgo/capacitor-updater": "^8.51.3",
+    "@element-plus/icons-vue": "^2.3.2"
   }
 }

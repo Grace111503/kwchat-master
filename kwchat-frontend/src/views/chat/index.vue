@@ -52,7 +52,7 @@
         <!-- 聊天头部 -->
         <div class="chat-header">
           <!-- 移动端返回按钮 -->
-          <el-icon class="back-btn hide-desktop" @click="goBack">
+          <el-icon class="back-btn" size="36" @click="goBack">
             <ArrowLeft />
           </el-icon>
           <div class="chat-title">
@@ -263,6 +263,8 @@ import ChatInput from '@/components/chat/ChatInput.vue'
 import AiFeatures from '@/components/chat/AiFeatures.vue'
 import GroupInfoPanel from '@/components/chat/GroupInfoPanel.vue'
 import UserProfile from '@/components/chat/UserProfile.vue'
+import { ArrowLeft, Search, Opportunity, InfoFilled, Loading, ChatDotRound, CircleCheck, Warning } from '@element-plus/icons-vue'
+
 
 const userStore = useUserStore()
 const chatStore = useChatStore()
@@ -817,28 +819,42 @@ const handleTranslateMessage = (message) => {
   aiFeaturesRef.value?.translateDirectly(message)
 }
 
-const showConversationInfo = () => {
+const showConversationInfo = async () => {
   if (chatStore.currentConversation?.conversationType === 2) {
     // 群聊 - 显示群信息
     groupInfoVisible.value = true
-  } else {
-    // 单聊 - 显示对方用户信息
-    showUserProfile(targetUser.value)
+  } else if (chatStore.currentConversation?.conversationType === 1) {
+    // 单聊 - 获取对方用户信息并显示
+    await showTargetUserInfo()
   }
 }
 
-// 获取对方用户信息（单聊时）
-const targetUser = computed(() => {
-  if (!chatStore.currentConversation || chatStore.currentConversation.conversationType !== 1) {
-    return null
+// 显示单聊对方用户信息
+const showTargetUserInfo = async () => {
+  if (!chatStore.currentConversation) return
+
+  try {
+    // 获取会话成员列表
+    const res = await getConversationMembers(chatStore.currentConversation.id)
+    if (res.code === 200 && res.data) {
+      // 找到对方用户（不是自己的那个）
+      const currentUserId = userStore.userInfo?.id
+      const targetMember = res.data.find(member => member.userId !== currentUserId)
+
+      if (targetMember) {
+        selectedUser.value = {
+          id: targetMember.userId,
+          nickname: targetMember.nickname || chatStore.currentConversation.name,
+          avatar: chatStore.currentConversation.avatar
+        }
+        userProfileVisible.value = true
+      }
+    }
+  } catch (error) {
+    console.error('获取用户信息失败:', error)
+    ElMessage.error('获取用户信息失败')
   }
-  // 从会话名称中获取对方信息
-  return {
-    id: chatStore.currentConversation.targetUserId,
-    nickname: chatStore.currentConversation.name,
-    avatar: chatStore.currentConversation.avatar
-  }
-})
+}
 
 const showUserProfile = (user) => {
   if (!user) return
@@ -953,6 +969,7 @@ onUnmounted(() => {
     box-shadow: 0 0 0 1px var(--border-color) inset;
     border-radius: 0;
     background: var(--bg-primary);
+  
 
     &.is-focus {
       box-shadow: 0 0 0 1px #2b7fff inset;
@@ -999,35 +1016,69 @@ onUnmounted(() => {
   justify-content: space-between;
   border-bottom: 1px solid var(--border-color);
   background: var(--bg-primary);
+  position: relative;
 }
 
 .chat-title {
   display: flex;
   align-items: center;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 50%;
+  pointer-events: none;
 
   .name {
     font-size: 15px;
     font-weight: 600;
     color: var(--text-primary);
+    width: 100%;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow:ellipsis; //长文字显示省略号
+    white-space:nowrap; //不换行
   }
 
   .member-count {
     font-size: 13px;
     color: var(--text-placeholder);
     margin-left: 6px;
+    flex-shrink: 0;
   }
 }
 
 .chat-actions {
   display: flex;
   gap: 12px;
+  flex-shrink: 0;
+}
+
+.back-btn {
+  --el-icon-size: 32px !important;
+  font-size: 32px !important;
+  cursor: pointer;
+  color: var(--text-primary);
+  transition: color 0.15s;
+  padding: 8px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    color: #2b7fff;
+  }
 }
 
 .action-btn {
-  font-size: 18px;
+  --el-icon-size: 36px !important;
+  font-size: 36px !important;
   color: var(--text-placeholder);
   cursor: pointer;
   transition: color 0.15s;
+  padding: 8px;
 
   &:hover {
     color: #2b7fff;
@@ -1219,16 +1270,32 @@ onUnmounted(() => {
   }
 
   .back-btn {
-    font-size: 24px;
+    --el-icon-size: 36px !important;
+    font-size: 36px !important;
     cursor: pointer;
-    color: #333;
-    // 增大点击区域
+    color: var(--text-primary);
+    transition: color 0.15s;
     padding: 12px;
-    margin: -12px 8px -12px 0;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover {
+      color: #2b7fff;
+    }
   }
 
   .chat-title .name {
     font-size: 14px;
+  }
+
+  .action-btn {
+    --el-icon-size: 36px !important;
+    font-size: 36px !important;
+    padding: 12px;
   }
 
   .multi-select-toolbar {
