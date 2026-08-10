@@ -271,8 +271,8 @@ const goToDebug = () => {
 @media (max-width: 768px), (max-device-width: 768px) {
   .login-container {
     flex-direction: column;
-    padding-top: env(safe-area-inset-top, 0px);
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-top: var(--sat, env(safe-area-inset-top, 0px));
+    padding-bottom: var(--sab, env(safe-area-inset-bottom, 0px));
   }
 
   .login-left {

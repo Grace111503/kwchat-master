@@ -5,20 +5,6 @@ $mobile: 768px;
 $tablet: 1024px;
 $desktop: 1200px;
 
-// 移动端隐藏
-.hide-mobile {
-  @media (max-width: $mobile) {
-    display: none !important;
-  }
-}
-
-// 桌面端隐藏
-.hide-desktop {
-  @media (min-width: $mobile) {
-    display: none !important;
-  }
-}
-
 // 移动端显示（默认隐藏）
 .show-mobile {
   display: none !important;

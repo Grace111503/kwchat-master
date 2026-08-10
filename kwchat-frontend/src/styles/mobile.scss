@@ -7,10 +7,13 @@
 
 // 安全区域变量（兼容性更好）
 :root {
+  // --sat 和 --status-bar-height 由 Java 端注入真实值
+  // env(safe-area-inset-top) 在华为/鸿蒙 WebView 中可能返回 0，需要 Java 端兜底
   --sat: env(safe-area-inset-top, 0px);
   --sab: env(safe-area-inset-bottom, 0px);
   --sal: env(safe-area-inset-left, 0px);
   --sar: env(safe-area-inset-right, 0px);
+  --status-bar-height: env(safe-area-inset-top, 0px);
 
   // 底部导航栏高度
   --bottom-nav-height: 56px;
@@ -66,14 +69,14 @@ html, body {
 // 桌面端隐藏
 .hide-desktop {
   @media (min-width: 769px) {
-    display: none !important;
+    //display: none !important;
   }
 }
 
 // 移动端隐藏
 .hide-mobile {
   @media (max-width: 768px) {
-    display: none !important;
+    //display: none !important;
   }
 }
 

@@ -1010,7 +1010,7 @@ onUnmounted(() => {
 
 .chat-header {
   height: 56px;
-  padding: env(safe-area-inset-top, 0px) 20px 0;
+  padding: var(--sat, env(safe-area-inset-top, 0px)) 20px 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1267,6 +1267,9 @@ onUnmounted(() => {
     padding: var(--sat) 12px 0;
     // 增大触摸区域
     min-height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
   }
 
   .back-btn {

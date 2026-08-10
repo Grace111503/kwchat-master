@@ -2,7 +2,9 @@ package com.kwp.chat;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.graphics.Rect;
 import android.os.Bundle;
+import android.view.View;
 import android.webkit.PermissionRequest;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
@@ -32,8 +34,51 @@ public class MainActivity extends BridgeActivity {
         // 配置 WebView 设置，确保在 Capacitor 环境下可以正常加载 HTTP 图片/头像
         configureWebViewSettings();
 
+        // 注入状态栏高度到 WebView（华为/鸿蒙兼容）
+        injectStatusBarHeight();
+
         // 启动时主动请求运行时权限（麦克风、相机等）
         requestAppPermissions();
+    }
+
+    private int lastStatusBarHeight = -1;
+
+    /**
+     * 获取状态栏实际高度并注入到 WebView 的 CSS 变量
+     * 解决华为/鸿蒙设备上 env(safe-area-inset-top) 返回 0 的问题
+     */
+    private void injectStatusBarHeight() {
+        // 延迟执行，确保 WebView 已经加载完成
+        getWindow().getDecorView().post(() -> {
+            doInjectStatusBarHeight();
+        });
+
+        // 监听布局变化，动态更新状态栏高度（应对旋转等场景）
+        View rootView = findViewById(android.R.id.content);
+        if (rootView != null) {
+            rootView.addOnLayoutChangeListener((v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> {
+                doInjectStatusBarHeight();
+            });
+        }
+    }
+
+    private void doInjectStatusBarHeight() {
+        Rect rectangle = new Rect();
+        getWindow().getDecorView().getWindowVisibleDisplayFrame(rectangle);
+        int statusBarHeight = rectangle.top;
+
+        // 仅在高度变化时注入，避免重复执行
+        if (statusBarHeight == lastStatusBarHeight) return;
+        lastStatusBarHeight = statusBarHeight;
+
+        Bridge bridge = getBridge();
+        if (bridge != null && bridge.getWebView() != null) {
+            String js = "javascript:(function(){"
+                + "document.documentElement.style.setProperty('--status-bar-height', '" + statusBarHeight + "px');"
+                + "document.documentElement.style.setProperty('--sat', '" + statusBarHeight + "px');"
+                + "})()";
+            bridge.getWebView().evaluateJavascript(js, null);
+        }
     }
 
     /**

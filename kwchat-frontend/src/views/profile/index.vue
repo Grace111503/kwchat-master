@@ -441,8 +441,8 @@ const handleFileChange = async (event) => {
 // 移动端响应式
 @media (max-width: 768px), (max-device-width: 768px) {
   .profile-container {
-    height: calc(100vh - 56px - env(safe-area-inset-bottom, 0px));
-    padding-top: env(safe-area-inset-top, 0px);
+    height: calc(100vh - 56px - var(--sab, env(safe-area-inset-bottom, 0px)));
+    padding-top: var(--sat, env(safe-area-inset-top, 0px));
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
   }

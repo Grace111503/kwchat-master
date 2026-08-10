@@ -952,7 +952,7 @@ onMounted(() => {
 @media (max-width: 768px) {
   .contacts-container {
     flex-direction: column;
-    height: calc(100vh - 56px - env(safe-area-inset-bottom, 0px));
+    height: calc(100vh - 56px - var(--sab, env(safe-area-inset-bottom, 0px)));
   }
 
   .contacts-sidebar {
@@ -974,7 +974,7 @@ onMounted(() => {
       bottom: 0;
       z-index: 1000;
       background: var(--bg-primary, #fff);
-      padding-top: env(safe-area-inset-top, 0px);
+      padding-top: var(--sat, env(safe-area-inset-top, 0px));
     }
   }
 
