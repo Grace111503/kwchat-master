@@ -837,16 +837,19 @@ const showTargetUserInfo = async () => {
     // 获取会话成员列表
     const res = await getConversationMembers(chatStore.currentConversation.id)
     if (res.code === 200 && res.data) {
-      // 找到对方用户（不是自己的那个）
       const currentUserId = userStore.userInfo?.id
-      const targetMember = res.data.find(member => member.userId !== currentUserId)
+      // 找到对方用户（不是自己的那个），兼容 userId 和 id 两种字段名
+      const targetMember = res.data.find(member => (member.userId || member.id) !== currentUserId)
 
       if (targetMember) {
+        const targetId = targetMember.userId || targetMember.id
         selectedUser.value = {
-          id: targetMember.userId,
+          id: targetId,
           nickname: targetMember.nickname || chatStore.currentConversation.name,
-          avatar: chatStore.currentConversation.avatar
+          avatar: targetMember.avatar || chatStore.currentConversation.avatar
         }
+        // 等待 Vue 完成 props 传递后再打开抽屉，确保子组件能拿到 user
+        await nextTick()
         userProfileVisible.value = true
       }
     }

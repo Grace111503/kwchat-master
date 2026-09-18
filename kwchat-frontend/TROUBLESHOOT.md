@@ -7,7 +7,7 @@
 ## 原因分析
 
 ### 最常见原因：服务器不可达
-手机无法访问 `http://118.25.44.250:8080`，可能原因：
+手机无法访问 `http://YOUR_SERVER_IP:8080`，可能原因：
 1. 服务器未运行
 2. 防火墙阻止了 8080/9092 端口
 3. 手机和服务器不在同一网络
@@ -24,7 +24,7 @@ Android 9+ 默认阻止 HTTP 明文流量（已配置允许）
 
 在手机浏览器中直接访问：
 ```
-http://118.25.44.250:8080
+http://YOUR_SERVER_IP:8080
 ```
 
 - ✅ 能看到内容 → 服务器可达，问题在 App 配置
@@ -34,10 +34,10 @@ http://118.25.44.250:8080
 
 ```powershell
 # 测试服务器是否在线
-ping 118.25.44.250
+ping YOUR_SERVER_IP
 
 # 测试 8080 端口
-curl http://118.25.44.250:8080
+curl http://YOUR_SERVER_IP:8080
 ```
 
 ### 步骤 3：检查服务器防火墙
@@ -156,7 +156,7 @@ echo "<h1>Server is running!</h1>" | sudo tee /var/www/html/test.html
 
 然后在手机浏览器访问：
 ```
-http://118.25.44.250/test.html
+http://YOUR_SERVER_IP/test.html
 ```
 
 如果能看到 "Server is running!"，说明服务器可达。
@@ -223,26 +223,26 @@ service.interceptors.request.use(
 VITE_API_BASE_URL=/api
 
 # WebSocket地址（使用IP访问）
-VITE_WS_URL=ws://118.25.44.250/ws
+VITE_WS_URL=ws://YOUR_SERVER_IP/ws
 
 # 应用标题
 VITE_APP_TITLE=快伟通
 
 # 服务器地址（App直连用）
-VITE_API_SERVER_URL=http://118.25.44.250:8080/api
-VITE_WS_SERVER_URL=ws://118.25.44.250:9092/ws
+VITE_API_SERVER_URL=http://YOUR_SERVER_IP:8080/api
+VITE_WS_SERVER_URL=ws://YOUR_SERVER_IP:9092/ws
 ```
 
 检查构建产物是否包含正确的地址：
 
 ```bash
 # 在前端目录执行
-grep -o "http://118.25.44.250[^\"']*" dist/assets/*.js
+grep -o "http://YOUR_SERVER_IP[^\"']*" dist/assets/*.js
 ```
 
 应该看到：
 ```
-dist/assets/index-xxxxx.js:http://118.25.44.250:8080/api
+dist/assets/index-xxxxx.js:http://YOUR_SERVER_IP:8080/api
 ```
 
 ---
@@ -317,7 +317,7 @@ npx cap run android
 
 如果以上方法都无法解决问题，请提供：
 
-1. 手机浏览器访问 `http://118.25.44.250:8080` 的截图
-2. 电脑上 `ping 118.25.44.250` 的结果
-3. 电脑上 `curl http://118.25.44.250:8080` 的结果
+1. 手机浏览器访问 `http://YOUR_SERVER_IP:8080` 的截图
+2. 电脑上 `ping YOUR_SERVER_IP` 的结果
+3. 电脑上 `curl http://YOUR_SERVER_IP:8080` 的结果
 4. Android Logcat 中的错误日志

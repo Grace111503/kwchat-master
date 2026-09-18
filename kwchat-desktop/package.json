@@ -1,0 +1,57 @@
+{
+  "name": "kwchat-desktop",
+  "version": "1.0.0",
+  "description": "快伟通桌面端 - 基于 Electron 打包",
+  "main": "electron/main.js",
+  "author": "KuaiTong",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dev": "set ELECTRON_IS_DEV=1 && electron .",
+    "build:win": "electron-builder --win --x64",
+    "build:dir": "electron-builder --win --dir",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "devDependencies": {
+    "electron": "^28.3.3",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.kuaitong.kwchat",
+    "productName": "快伟通",
+    "copyright": "Copyright © 2026 KuaiTong",
+    "directories": {
+      "output": "dist-desktop",
+      "buildResources": "build"
+    },
+    "files": [
+      "electron/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../kwchat-frontend/dist",
+        "to": "frontend-dist"
+      }
+    ],
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "快伟通",
+      "differentialPackage": false
+    }
+  }
+}

@@ -280,10 +280,10 @@ await removeToken()
 
 ```bash
 # API 服务器地址（Capacitor 直连）
-VITE_API_SERVER_URL=http://118.25.44.250:8080/api
+VITE_API_SERVER_URL=http://YOUR_SERVER_IP:8080/api
 
 # WebSocket 服务器地址（Capacitor 直连）
-VITE_WS_SERVER_URL=ws://118.25.44.250:9092/ws
+VITE_WS_SERVER_URL=ws://YOUR_SERVER_IP:9092/ws
 ```
 
 ### 4. 重新构建和部署

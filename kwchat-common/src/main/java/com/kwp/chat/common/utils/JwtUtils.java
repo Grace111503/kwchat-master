@@ -20,7 +20,7 @@ import java.util.Map;
 @Component
 public class JwtUtils {
 
-    @Value("${jwt.secret:defaultSecretKeyForJwtTokenGeneration2024}")
+    @Value("${jwt.secret}")
     private String secret;
 
     @Value("${jwt.expiration:86400000}")

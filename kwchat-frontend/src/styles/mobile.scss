@@ -69,14 +69,14 @@ html, body {
 // 桌面端隐藏
 .hide-desktop {
   @media (min-width: 769px) {
-    //display: none !important;
+    display: none !important;
   }
 }
 
 // 移动端隐藏
 .hide-mobile {
   @media (max-width: 768px) {
-    //display: none !important;
+    display: none !important;
   }
 }
 

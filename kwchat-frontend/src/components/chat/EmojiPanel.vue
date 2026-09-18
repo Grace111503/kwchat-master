@@ -7,18 +7,34 @@
         :key="index"
         class="tab-item"
         :class="{ active: activeCategory === index }"
+        :title="category.label"
         @click="activeCategory = index"
       >
-        {{ category.name }}
+        <el-icon v-if="category.icon" :size="18"><component :is="category.icon" /></el-icon>
+        <span v-else>{{ category.name }}</span>
       </div>
     </div>
 
     <!-- 表情列表 -->
     <div class="emoji-content">
-      <!-- 系统表情 -->
+      <!-- 最近使用 -->
       <div v-if="activeCategory === 0" class="emoji-grid">
+        <div v-if="recentEmojis.length === 0" class="empty-tip">暂无最近使用的表情</div>
         <span
-          v-for="emoji in systemEmojis"
+          v-for="emoji in recentEmojis"
+          :key="`recent-${emoji}`"
+          class="emoji-item"
+          @click="selectEmoji(emoji)"
+          :title="emoji"
+        >
+          {{ emoji }}
+        </span>
+      </div>
+
+      <!-- 分类表情 -->
+      <div v-else-if="activeCategory < categories.length - 1" class="emoji-grid">
+        <span
+          v-for="emoji in currentCategoryEmojis"
           :key="emoji"
           class="emoji-item"
           @click="selectEmoji(emoji)"
@@ -31,7 +47,7 @@
       <!-- 自定义表情包 -->
       <div v-else class="emoji-grid custom-emojis">
         <div
-          v-for="emoji in currentCustomEmojis"
+          v-for="emoji in customEmojis"
           :key="emoji.id"
           class="emoji-item custom"
           @click="selectCustomEmoji(emoji)"
@@ -47,15 +63,15 @@
       </div>
     </div>
 
-    <!-- 最近使用 -->
-    <div class="recent-emojis" v-if="recentEmojis.length > 0 && activeCategory === 0">
+    <!-- 最近使用快捷区（仅在非“最近”分类显示） -->
+    <div class="recent-emojis" v-if="recentEmojis.length > 0 && activeCategory !== 0">
       <div class="recent-header">
         <span>最近使用</span>
         <el-link type="primary" underline="never" @click="clearRecent">清空</el-link>
       </div>
       <div class="recent-list">
         <span
-          v-for="emoji in recentEmojis"
+          v-for="emoji in recentEmojis.slice(0, 12)"
           :key="emoji"
           class="emoji-item"
           @click="selectEmoji(emoji)"
@@ -80,6 +96,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
+import { Clock, Plus } from '@element-plus/icons-vue'
 
 const props = defineProps({
   visible: {
@@ -93,17 +110,20 @@ const emit = defineEmits(['select', 'select-custom'])
 const fileInputRef = ref(null)
 const activeCategory = ref(0)
 
-// 表情分类
+// 表情分类（0=最近，1=笑脸，2=手势，3=动物，4=食物，5=活动，6=符号，7=自定义）
 const categories = [
-  { name: '😀', type: 'system' },
-  { name: '🐱', type: 'animal' },
-  { name: '🍕', type: 'food' },
-  { name: '⚽', type: 'activity' },
-  { name: '❤️', type: 'custom' }
+  { name: '', label: '最近使用', icon: Clock },
+  { name: '😀', label: '笑脸' },
+  { name: '👍', label: '手势' },
+  { name: '🐱', label: '动物' },
+  { name: '🍕', label: '食物' },
+  { name: '⚽', label: '活动' },
+  { name: '❤️', label: '符号' },
+  { name: '⭐', label: '自定义' }
 ]
 
-// 系统表情
-const systemEmojis = [
+// 笑脸表情
+const smileEmojis = [
   '😀', '😁', '😂', '🤣', '😃', '😄', '😅', '😆', '😉', '😊',
   '😋', '😎', '😍', '🥰', '😘', '😗', '😙', '😚', '🙂', '🤗',
   '🤩', '🤔', '🤨', '😐', '😑', '😶', '🙄', '😏', '😣', '😥',
@@ -111,17 +131,73 @@ const systemEmojis = [
   '😝', '🤤', '😒', '😓', '😔', '😕', '🙃', '🤑', '😲', '🙁',
   '😖', '😞', '😟', '😤', '😢', '😭', '😦', '😧', '😨', '😩',
   '🤯', '😬', '😰', '😱', '🥵', '🥶', '😳', '🤪', '😵', '🥴',
-  '😡', '😠', '🤬', '😈', '👿', '💀', '☠️', '💩', '🤡', '👹',
-  '👻', '👽', '👾', '🤖', '🎃', '😺', '😸', '😹', '😻', '😼',
+  '😡', '😠', '🤬', '😈', '👿', '💀', '☠️', '💩', '🤡', '👹'
+]
+
+// 手势表情
+const gestureEmojis = [
   '👍', '👎', '👌', '✌️', '🤞', '🤟', '🤘', '🤙', '👋', '🤚',
   '👏', '🙌', '🤝', '🙏', '✍️', '💪', '🦾', '🦿', '🦵', '🦶',
-  '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔',
-  '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '☮️'
+  '👊', '✊', '🤛', '🤜', '🤞', '✋', '🖐️', '🖖', '👈', '👉',
+  '👆', '👇', '☝️', '🫵', '🤌', '🫰', '🤌', '🫴', '🫳', '💅'
 ]
+
+// 动物表情
+const animalEmojis = [
+  '🐱', '🐶', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯',
+  '🦁', '🐮', '🐷', '🐸', '🐵', '🙈', '🙉', '🙊', '🐒', '🐔',
+  '🐧', '🐦', '🐤', '🐣', '🐥', '🦆', '🦅', '🦉', '🦇', '🐺',
+  '🐗', '🐴', '🦄', '🐝', '🐛', '🦋', '🐌', '🐞', '🐜', '🦗',
+  '🕷️', '🦂', '🐢', '🐍', '🦎', '🦖', '🦕', '🐙', '🦑', '🦐',
+  '🦞', '🦀', '🐡', '🐠', '🐟', '🐬', '🐳', '🐋', '🦈', '🐊'
+]
+
+// 食物表情
+const foodEmojis = [
+  '🍕', '🍔', '🍟', '🌭', '🥪', '🌮', '🌯', '🥙', '🧆', '🥚',
+  '🍳', '🥘', '🍲', '🥣', '🥗', '🍿', '🧈', '🧂', '🥫', '🍱',
+  '🍘', '🍙', '🍚', '🍛', '🍜', '🍝', '🍠', '🍢', '🍣', '🍤',
+  '🍥', '🥮', '🍡', '🥟', '🥠', '🥡', '🍦', '🍧', '🍨', '🍩',
+  '🍪', '🎂', '🍰', '🧁', '🥧', '🍫', '🍬', '🍭', '🍮', '🍯',
+  '🍎', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🍈', '🍒'
+]
+
+// 活动表情
+const activityEmojis = [
+  '⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎱',
+  '🪀', '🏓', '🏸', '🏒', '🏑', '🥍', '🏏', '🪃', '🥅', '⛳',
+  '🪁', '🏹', '🎣', '🤿', '🥊', '🥋', '🎽', '🛹', '🛼', '🛷',
+  '⛸️', '🥌', '🎿', '⛷️', '🏂', '🪂', '🏋️', '🤼', '🤸', '⛹️',
+  '🤺', '🤾', '🏌️', '🏇', '🧘', '🏄', '🏊', '🤽', '🚣', '🧗'
+]
+
+// 符号表情
+const symbolEmojis = [
+  '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔',
+  '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '☮️',
+  '✨', '⭐', '🌟', '💫', '✅', '❌', '❓', '❗', '⚠️', '🔴',
+  '🟠', '🟡', '🟢', '🔵', '🟣', '🟤', '⚫', '⚪', '🔶', '🔷',
+  '🏆', '🥇', '🥈', '🥉', '🎁', '🎉', '🎊', '🎈', '🎂', '🎄',
+  '💯', '🔔', '🔕', '🎵', '🎶', '〰️', '➰', '✔️', '✖️', '➕'
+]
+
+// 当前分类的表情数据
+const currentCategoryEmojis = computed(() => {
+  const map = [
+    smileEmojis,
+    gestureEmojis,
+    animalEmojis,
+    foodEmojis,
+    activityEmojis,
+    symbolEmojis
+  ]
+  // activeCategory === 0 是最近使用，由模板单独处理
+  const idx = activeCategory.value - 1
+  return map[idx] || smileEmojis
+})
 
 // 自定义表情包
 const customEmojis = ref([
-  // 示例数据，实际应从服务器加载
   {
     id: 1,
     name: '开心',
@@ -132,18 +208,6 @@ const customEmojis = ref([
 
 // 最近使用的表情
 const recentEmojis = ref([])
-
-// 当前分类的自定义表情
-const currentCustomEmojis = computed(() => {
-  const categoryMap = {
-    1: 'animal',
-    2: 'food',
-    3: 'activity',
-    4: 'default'
-  }
-  const category = categoryMap[activeCategory.value] || 'default'
-  return customEmojis.value.filter(e => e.category === category)
-})
 
 // 选择系统表情
 const selectEmoji = (emoji) => {
@@ -166,7 +230,6 @@ const addToRecent = (emoji) => {
   if (recentEmojis.value.length > 20) {
     recentEmojis.value.pop()
   }
-  // 保存到本地存储
   localStorage.setItem('recent-emojis', JSON.stringify(recentEmojis.value))
 }
 
@@ -197,7 +260,6 @@ const handleAddEmoji = (event) => {
       continue
     }
 
-    // 创建本地预览URL
     const url = URL.createObjectURL(file)
     const emoji = {
       id: Date.now() + Math.random(),
@@ -210,10 +272,7 @@ const handleAddEmoji = (event) => {
     customEmojis.value.push(emoji)
   }
 
-  // 保存到本地存储
   saveCustomEmojis()
-
-  // 清空input
   event.target.value = ''
 }
 
@@ -272,11 +331,15 @@ loadRecentEmojis()
   display: flex;
   border-bottom: 1px solid #e8e8e8;
   padding: 8px;
-  gap: 8px;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
 
   .tab-item {
-    width: 36px;
+    min-width: 36px;
     height: 36px;
+    padding: 0 8px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -284,6 +347,7 @@ loadRecentEmojis()
     cursor: pointer;
     border-radius: 8px;
     transition: background 0.2s;
+    flex-shrink: 0;
 
     &:hover {
       background: #f5f5f5;
@@ -291,8 +355,17 @@ loadRecentEmojis()
 
     &.active {
       background: #e8f4ff;
+      color: #2b7fff;
     }
   }
+}
+
+.empty-tip {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: #999;
+  font-size: 13px;
+  padding: 40px 0;
 }
 
 .emoji-content {

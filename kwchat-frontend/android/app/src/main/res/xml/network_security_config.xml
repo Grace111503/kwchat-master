@@ -8,7 +8,7 @@
     </base-config>
     <!-- 针对服务器 IP 的额外配置 -->
     <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="true">118.25.44.250</domain>
+        <domain includeSubdomains="true">YOUR_SERVER_IP</domain>
         <trust-anchors>
             <certificates src="system" />
         </trust-anchors>

@@ -1,6 +1,0 @@
-{
-  "version": "1.0.6",
-  "url": "http://118.25.44.250:8080/api/uploads/updates/app-v1.0.6.zip",
-  "notes": "修复语音发送、麦克风权限、置顶功能、用户信息显示、撤回消息等",
-  "forceUpdate": false
-}

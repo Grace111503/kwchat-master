@@ -50,6 +50,9 @@ declare module 'vue' {
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     UserProfile: typeof import('./components/chat/UserProfile.vue')['default']
+    WebChatArea: typeof import('./components/web/WebChatArea.vue')['default']
+    WebConversationPanel: typeof import('./components/web/WebConversationPanel.vue')['default']
+    WebSidebar: typeof import('./components/web/WebSidebar.vue')['default']
   }
   export interface ComponentCustomProperties {
     vLoading: typeof import('element-plus/es')['ElLoadingDirective']

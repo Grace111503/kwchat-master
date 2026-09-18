@@ -23,7 +23,7 @@ public class AppVersionController {
     @Value("${app.version:1.0.0}")
     private String appVersion;
 
-    @Value("${app.update.url:http://118.25.44.250:8080/updates/app-v1.0.1.zip}")
+    @Value("${app.update.url:http://localhost:8080/updates/app-v1.0.1.zip}")
     private String updateUrl;
 
     @Value("${app.update.notes:初始版本}")

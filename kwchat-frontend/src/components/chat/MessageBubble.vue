@@ -200,7 +200,7 @@ const formatText = (text) => {
 
 /**
  * 获取文件URL，兼容旧的MinIO格式
- * 旧格式：http://118.25.44.250:9000/kuaitong/image/xxx.jpg?X-Amz-...
+ * 旧格式：http://YOUR_SERVER_IP:9000/kuaitong/image/xxx.jpg?X-Amz-...
  * 新格式：/uploads/image/xxx.jpg
  */
 const getFileUrl = (url) => {

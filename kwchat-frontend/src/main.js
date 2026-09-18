@@ -30,7 +30,7 @@ async function checkForUpdates() {
     const { CapacitorUpdater } = await import('@capgo/capacitor-updater')
 
     // 从服务器获取最新版本
-    const response = await fetch('http://118.25.44.250:8080/api/uploads/updates/app-version.json')
+    const response = await fetch('/api/uploads/updates/app-version.json')
     const latest = await response.json()
     console.log('[Update] Latest version:', latest.version)
 

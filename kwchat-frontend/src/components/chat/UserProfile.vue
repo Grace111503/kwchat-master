@@ -4,7 +4,6 @@
     title="用户信息"
     direction="rtl"
     :size="windowWidth <= 768 ? '100%' : '320px'"
-    @open="loadUserInfo"
   >
     <div class="user-profile" v-loading="loading">
       <template v-if="userInfo">
@@ -85,6 +84,7 @@ const chatStore = useChatStore()
 
 const loading = ref(false)
 const userInfo = ref(null)
+const loadedUserId = ref(null)
 
 const isSelf = computed(() => {
   return userInfo.value?.id === userStore.userInfo?.id
@@ -112,11 +112,18 @@ const formatBirthday = (birthday) => {
 }
 
 const loadUserInfo = async () => {
-  if (!props.user?.id) return
+  if (!props.user?.id) {
+    console.warn('[UserProfile] loadUserInfo: props.user?.id 为空', props.user)
+    return
+  }
+
+  // 防止重复加载同一个用户
+  if (loadedUserId.value === props.user.id && userInfo.value) return
 
   // 如果是自己，直接用 store 中的数据
   if (props.user.id === userStore.userInfo?.id) {
     userInfo.value = userStore.userInfo
+    loadedUserId.value = props.user.id
     return
   }
 
@@ -126,24 +133,37 @@ const loadUserInfo = async () => {
   // 从 API 获取完整用户信息
   loading.value = true
   try {
-    console.log('获取用户详情, userId:', props.user.id)
+    console.log('[UserProfile] 获取用户详情, userId:', props.user.id)
     const res = await getUserDetail(props.user.id)
-    console.log('用户详情响应:', res)
+    console.log('[UserProfile] 用户详情响应:', res)
 
     if (res && res.code === 200 && res.data) {
       // 合并 API 返回的数据（保留基础信息作为兜底）
       userInfo.value = { ...props.user, ...res.data }
-      console.log('用户信息加载成功:', userInfo.value)
+      console.log('[UserProfile] 用户信息加载成功:', userInfo.value)
     } else {
-      console.warn('API 返回异常:', res)
+      console.warn('[UserProfile] API 返回异常:', res)
     }
   } catch (error) {
-    console.error('获取用户信息失败:', error)
+    console.error('[UserProfile] 获取用户信息失败:', error)
     // 已经设置了基础信息，不需要再赋值
   } finally {
     loading.value = false
+    loadedUserId.value = props.user.id
   }
 }
+
+// 监听 visible 和 user 变化，确保数据加载可靠
+watch([visible, () => props.user], ([vis, user]) => {
+  if (vis && user?.id) {
+    console.log('[UserProfile] watch 触发, visible:', vis, 'user:', user)
+    loadUserInfo()
+  } else if (!vis) {
+    // 抽屉关闭时重置，下次打开时重新加载
+    userInfo.value = null
+    loadedUserId.value = null
+  }
+}, { immediate: true })
 
 const startChat = async () => {
   if (!userInfo.value?.id) return
@@ -162,9 +182,9 @@ const startChat = async () => {
   }
 }
 
-// 监听 user 变化，重新加载
+// 监听 user 变化，重新加载（保留兼容）
 watch(() => props.user, (newUser) => {
-  if (newUser && visible.value) {
+  if (newUser && visible.value && newUser.id) {
     loadUserInfo()
   }
 })

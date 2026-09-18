@@ -9,10 +9,10 @@ services:
     ports:
       - "3307:3306"
     environment:
-      MYSQL_ROOT_PASSWORD: root123456
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root123456}
       MYSQL_DATABASE: kuaitong
       MYSQL_USER: kwchat
-      MYSQL_PASSWORD: kwchat123456
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-kwchat123456}
       TZ: Asia/Shanghai
     volumes:
       - mysql_data:/var/lib/mysql
@@ -37,7 +37,7 @@ services:
       TZ: Asia/Shanghai
     volumes:
       - redis_data:/data
-    command: redis-server --appendonly yes --requirepass "redis123"
+    command: redis-server --appendonly yes --requirepass "${REDIS_PASSWORD:-redis123}"
     networks:
       - kwchat-network
 
@@ -70,7 +70,7 @@ services:
       - "15672:15672"
     environment:
       RABBITMQ_DEFAULT_USER: dev_admin
-      RABBITMQ_DEFAULT_PASS: 123456
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-123456}
       RABBITMQ_DEFAULT_VHOST: /dev
       TZ: Asia/Shanghai
     volumes:
@@ -134,7 +134,7 @@ services:
     ports:
       - "3001:3000"
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin123456
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin123456}
       - TZ=Asia/Shanghai
     volumes:
       - grafana_data:/var/lib/grafana

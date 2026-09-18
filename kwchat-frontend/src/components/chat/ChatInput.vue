@@ -1,5 +1,18 @@
 <template>
-  <div class="chat-input">
+  <div
+    class="chat-input"
+    :class="{ 'drag-over': isDragOver }"
+    @dragover.prevent="handleDragOver"
+    @dragenter.prevent="handleDragEnter"
+    @dragleave.prevent="handleDragLeave"
+    @drop.prevent="handleDrop"
+  >
+    <!-- 拖拽提示遮罩（仅 Web 环境） -->
+    <div class="drag-overlay" v-if="isDragOver">
+      <el-icon :size="32"><UploadFilled /></el-icon>
+      <span>松开鼠标上传文件</span>
+    </div>
+
     <!-- 引用消息提示 -->
     <div class="reply-preview" v-if="replyMessage">
       <div class="reply-content">
@@ -106,7 +119,8 @@ import { ref, computed, nextTick, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import EmojiPanel from './EmojiPanel.vue'
 import MentionList from './MentionList.vue'
-import { isMobile as checkIsMobile } from '@/utils/platform'
+import { isMobile as checkIsMobile, isCapacitor } from '@/utils/platform'
+import { UploadFilled } from '@element-plus/icons-vue'
 
 const props = defineProps({
   disabled: { type: Boolean, default: false },
@@ -131,6 +145,67 @@ const recordingTime = ref(0)
 let mediaRecorder = null
 let audioChunks = []
 let recordingTimer = null
+
+// 拖拽上传相关（仅 Web 环境启用）
+const isDragOver = ref(false)
+let dragCounter = 0
+
+// Web 环境才启用拖拽
+const enableDragUpload = computed(() => !isCapacitor())
+
+const handleDragEnter = (e) => {
+  if (!enableDragUpload.value) return
+  if (!e.dataTransfer?.types?.includes('Files')) return
+  dragCounter++
+  isDragOver.value = true
+}
+
+const handleDragOver = (e) => {
+  if (!enableDragUpload.value) return
+  // 仅阻止默认行为，状态由 dragenter/leave 控制
+}
+
+const handleDragLeave = (e) => {
+  if (!enableDragUpload.value) return
+  dragCounter--
+  if (dragCounter <= 0) {
+    dragCounter = 0
+    isDragOver.value = false
+  }
+}
+
+const handleDrop = (e) => {
+  if (!enableDragUpload.value) return
+  isDragOver.value = false
+  dragCounter = 0
+  const files = Array.from(e.dataTransfer?.files || [])
+  if (files.length === 0) return
+  files.forEach(file => processDroppedFile(file))
+}
+
+const processDroppedFile = (file) => {
+  if (file.type.startsWith('image/')) {
+    if (file.size > 10 * 1024 * 1024) {
+      ElMessage.error(`图片 ${file.name} 超过 10MB`)
+      return
+    }
+    emit('send-image', file)
+  } else if (file.type.startsWith('video/')) {
+    if (file.size > 50 * 1024 * 1024) {
+      ElMessage.error(`视频 ${file.name} 超过 50MB`)
+      return
+    }
+    emit('send-video', file)
+  } else if (file.type.startsWith('audio/')) {
+    emit('send-file', file)
+  } else {
+    if (file.size > 100 * 1024 * 1024) {
+      ElMessage.error(`文件 ${file.name} 超过 100MB`)
+      return
+    }
+    emit('send-file', file)
+  }
+}
 
 const canSend = computed(() => messageContent.value.trim().length > 0 && !props.disabled)
 
@@ -501,6 +576,28 @@ defineExpose({
   border-top: 1px solid var(--border-color);
   background: var(--bg-primary);
   position: relative;
+
+  &.drag-over {
+    background: rgba(43, 127, 255, 0.05);
+  }
+}
+
+.drag-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(43, 127, 255, 0.1);
+  border: 2px dashed #2b7fff;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #2b7fff;
+  z-index: 10;
+  pointer-events: none;
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .reply-preview {

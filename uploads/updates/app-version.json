@@ -1,6 +1,0 @@
-﻿{
-  "version": "1.0.16",
-  "url": "http://118.25.44.250:8080/api/uploads/updates/app-v1.0.16.zip",
-  "notes": "调大聊天窗口顶部图标，优化点击体验",
-  "forceUpdate": false
-}

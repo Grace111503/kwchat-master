@@ -10,6 +10,17 @@ let _isiOS = null
 let _isMobile = null
 
 /**
+ * 检测是否在 Electron 桌面端环境中
+ * 通过 preload.js 暴露的 window.kwchatDesktop 标识识别
+ */
+export function isElectron() {
+  if (typeof window !== 'undefined' && window.kwchatDesktop && window.kwchatDesktop.isDesktop === true) {
+    return true
+  }
+  return false
+}
+
+/**
  * 检测是否在 Capacitor 环境中
  */
 export function isCapacitor() {
@@ -107,18 +118,20 @@ export function isMobile() {
  */
 export function getApiBaseUrl() {
   const isCapacitorEnv = isCapacitor()
-  console.log('[Platform] isCapacitor:', isCapacitorEnv)
+  const isElectronEnv = isElectron()
+  const directConnect = isCapacitorEnv || isElectronEnv
+  console.log('[Platform] isCapacitor:', isCapacitorEnv, 'isElectron:', isElectronEnv)
 
-  if (isCapacitorEnv) {
-    // Capacitor 环境，直连后端 HTTP 端口
+  if (directConnect) {
+    // Capacitor / Electron 桌面端环境，直连后端 HTTP 端口
     const apiUrl = import.meta.env.VITE_API_SERVER_URL
     console.log('[Platform] VITE_API_SERVER_URL:', apiUrl)
     // 优先使用环境变量，否则使用默认值
-    const baseUrl = apiUrl || 'http://118.25.44.250:8080/api'
+    const baseUrl = apiUrl || 'http://YOUR_SERVER_IP:8080/api'
     console.log('[Platform] Using API baseUrl:', baseUrl)
     return baseUrl
   }
-  // Web 环境，通过代理
+  // 浏览器环境，通过代理
   console.log('[Platform] Using /api (proxy)')
   return '/api'
 }
@@ -127,11 +140,11 @@ export function getApiBaseUrl() {
  * 获取 WebSocket URL
  */
 export function getWsUrl() {
-  if (isCapacitor()) {
-    // Capacitor 环境，直连后端 WebSocket 端口
-    return import.meta.env.VITE_WS_SERVER_URL || 'ws://118.25.44.250:9092/ws'
+  if (isCapacitor() || isElectron()) {
+    // Capacitor / Electron 桌面端环境，直连后端 WebSocket 端口
+    return import.meta.env.VITE_WS_SERVER_URL || 'ws://YOUR_SERVER_IP:9092/ws'
   }
-  // Web 环境
+  // 浏览器环境
   return `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`
 }
 
@@ -139,6 +152,9 @@ export function getWsUrl() {
  * 获取客户端类型标识
  */
 export function getClientType() {
+  if (isElectron()) {
+    return 'desktop'
+  }
   if (isCapacitor()) {
     return isAndroid() ? 'android' : isIOS() ? 'ios' : 'capacitor'
   }
@@ -202,12 +218,12 @@ export function getAppVersion() {
 export function getFullFileUrl(url) {
   if (!url) return ''
 
-  const capEnv = isCapacitor()
+  const capEnv = isCapacitor() || isElectron()
 
   // 统一的服务器基地址获取（避免重复代码）
   const getServerBase = () => {
     if (capEnv) {
-      const apiUrl = import.meta.env.VITE_API_SERVER_URL || 'http://118.25.44.250:8080/api'
+      const apiUrl = import.meta.env.VITE_API_SERVER_URL || 'http://YOUR_SERVER_IP:8080/api'
       return apiUrl.endsWith('/api') ? apiUrl.slice(0, -4) : apiUrl
     }
     return ''
